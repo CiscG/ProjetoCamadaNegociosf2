@@ -1,41 +1,81 @@
-# ProjetoCamadaNegocios
+# Airbnb Clone - Plataforma de Aluguel de Imóveis
 
-Plataforma de aluguel de imóveis por temporada — clone didático do Airbnb — desenvolvida com **Flask**, **MongoDB** e **React + Vite**.
+Plataforma de aluguel de imóveis por temporada — clone didático do Airbnb — desenvolvida com **Spring Boot 3.2.5**, **MongoDB**, **React 19** e **Vite**.
 
----
-
-## Tecnologias
-
-- **Backend:** Python 3.10+ · Flask 3.x · MongoDB
-- **Frontend:** React 19 · Vite · Tailwind CSS · React Router
+Projeto acadêmico implementando camadas de negócio, persistência, requisitos de Java avançados (annotations, reflection, collections), geração de relatórios XML/TXT e CLI interativa.
 
 ---
 
-## Pré-requisitos
+## 🏗️ Arquitetura
 
-- [Python 3.10+](https://www.python.org/downloads/) — marque **"Add Python to PATH"**
-- [Node.js 18+](https://nodejs.org/)
-- [MongoDB Community](https://www.mongodb.com/try/download/community) — ou use o WSL (veja abaixo)
+### Backend (Spring Boot)
+- **Framework:** Spring Boot 3.2.5
+- **Banco de dados:** MongoDB
+- **Linguagem:** Java 17+
+- **Estrutura:** Controllers → Services → Repositories (camadas)
+- **Porta:** 5000
+
+### Frontend (React)
+- **Framework:** React 19
+- **Build Tool:** Vite 8
+- **Estilização:** Tailwind CSS
+- **Roteamento:** React Router
+- **Porta:** 5173
 
 ---
 
-## Como rodar (desenvolvimento)
+## 📋 Pré-requisitos
 
-Você precisará de **dois terminais abertos** ao mesmo tempo.
+- **Java 17+** (OpenJDK ou Oracle JDK)
+- **Maven 3.8+** (para compilação)
+- **Node.js 18+** (para frontend)
+- **MongoDB 6+** (Docker recomendado)
+- **Docker & Docker Compose** (opcional, para MongoDB)
 
-### Terminal 1 — Backend Flask
+---
 
-```powershell
-# Na raiz do projeto
-pip install -r requirements.txt
-python app.py
+## 🚀 Como rodar (desenvolvimento)
+
+Você precisará de **três terminais abertos** ao mesmo tempo.
+
+### Terminal 1 — MongoDB (Docker)
+
+```bash
+docker run -d -p 27017:27017 --name mongodb mongo:latest
 ```
 
-Roda em **http://localhost:5000**
+Ou use Docker Compose se houver um arquivo `docker-compose.yml`:
 
-### Terminal 2 — Frontend React
+```bash
+docker-compose up -d
+```
 
-```powershell
+### Terminal 2 — Backend Spring Boot
+
+```bash
+# Na raiz do projeto
+cd ~/ProjetoCamadaNegocios2
+
+# Compile e execute
+mvn clean install
+mvn spring-boot:run
+```
+
+Backend roda em **http://localhost:5000**
+
+> **Nota para Linux:** Se receber erro de conexão, obtenha o IP do MongoDB:
+> ```bash
+> docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mongodb
+> ```
+> E atualize `src/main/resources/application.properties`:
+> ```properties
+> spring.data.mongodb.uri=mongodb://172.17.0.2:27017/airbnb_clone
+> ```
+> (Substitua `172.17.0.2` pelo IP obtido)
+
+### Terminal 3 — Frontend React
+
+```bash
 cd FrontEnd
 npm install
 npm run dev
@@ -43,38 +83,29 @@ npm run dev
 
 Acesse **http://localhost:5173** no navegador.
 
-> O Vite redireciona automaticamente as chamadas `/api` para o Flask na porta 5000.
+> O Vite redireciona automaticamente as chamadas `/api` para o backend na porta 5000.
 
 ---
 
-## Como rodar (produção)
+## 🏭 Como rodar (produção)
 
-Gere o build do frontend e sirva tudo pelo Flask:
+Gere o build do frontend e sirva tudo pelo Spring Boot:
 
-```powershell
+```bash
 cd FrontEnd
 npm run build
 cd ..
-python app.py
+mvn clean package -DskipTests
+java -jar target/airbnb-clone-1.0.0.jar
 ```
 
 Acesse **http://localhost:5000** no navegador.
 
 ---
 
-## MongoDB no WSL (Linux)
+## 📊 Dados de demonstração
 
-Se preferir rodar o MongoDB via WSL em vez de instalar no Windows:
-
-```bash
-sudo service mongod start
-```
-
----
-
-## Dados de demonstração
-
-O banco é populado automaticamente na primeira requisição.
+O banco é populado automaticamente na primeira inicialização (classe `SeedDataLoader`).
 
 | Email | Perfil | Senha |
 |---|---|---|
@@ -82,30 +113,169 @@ O banco é populado automaticamente na primeira requisição.
 | maria@email.com | hospede | 123456 |
 | ana@email.com | ambos | 123456 |
 
-> Para reinserir os dados do zero: `python routes.py`
-
 ---
 
-## Funcionalidades
+## ✨ Funcionalidades
 
 | Recurso | Detalhes |
 |---|---|
-| Login | Autenticação por email/senha com hash bcrypt |
-| Busca de imóveis | Filtro por cidade e preço máximo |
-| Reserva | Criação com verificação de conflito de datas |
-| Disponibilidade | Visualização de períodos ocupados |
-| Dashboard | Reservas como hóspede e imóveis como anfitrião |
-| Anúncio | Cadastro de novo imóvel (perfis `anfitriao` e `ambos`) |
+| **Login** | Autenticação por email/senha com hash bcrypt |
+| **Busca de imóveis** | Filtro por cidade, preço, avaliação |
+| **Reserva** | Criação com verificação de conflito de datas |
+| **Disponibilidade** | Visualização de períodos ocupados |
+| **Dashboard** | Reservas como hóspede e imóveis como anfitrião |
+| **Cadastro de imóvel** | Perfis `anfitriao` e `ambos` |
+| **Relatórios** | Exportação XML e TXT |
+| **CLI** | Interface de linha de comando interativa |
 
 ---
 
-## API REST
+## 🔌 API REST
 
+### Autenticação
 | Método | Endpoint | Descrição |
 |---|---|---|
 | `POST` | `/api/login` | Autenticar usuário |
+| `POST` | `/api/logout` | Fazer logout |
+
+### Usuários
+| Método | Endpoint | Descrição |
+|---|---|---|
+| `GET` | `/api/usuarios` | Listar usuários |
+| `GET` | `/api/usuarios/{id}` | Obter usuário por ID |
+| `POST` | `/api/usuarios` | Criar novo usuário |
+| `PUT` | `/api/usuarios/{id}` | Atualizar usuário |
+| `DELETE` | `/api/usuarios/{id}` | Deletar usuário |
+
+### Imóveis (Locais)
+| Método | Endpoint | Descrição |
+|---|---|---|
 | `GET` | `/api/locais` | Listar imóveis (`cidade`, `preco_max`, `anfitriao_id`) |
-| `POST` | `/api/locais` | Cadastrar imóvel |
-| `GET` | `/api/locais/<id>/ocupacao` | Períodos ocupados |
+| `GET` | `/api/locais/{id}` | Obter imóvel por ID |
+| `POST` | `/api/locais` | Cadastrar novo imóvel |
+| `PUT` | `/api/locais/{id}` | Atualizar imóvel |
+| `DELETE` | `/api/locais/{id}` | Deletar imóvel |
+| `GET` | `/api/locais/{id}/ocupacao` | Períodos ocupados |
+
+### Reservas
+| Método | Endpoint | Descrição |
+|---|---|---|
 | `GET` | `/api/reservas` | Listar reservas (`hospede_id`, `anfitriao_id`, `status`) |
+| `GET` | `/api/reservas/{id}` | Obter reserva por ID |
 | `POST` | `/api/reservas` | Criar reserva |
+| `PUT` | `/api/reservas/{id}` | Atualizar reserva |
+| `DELETE` | `/api/reservas/{id}` | Cancelar reserva |
+| `GET` | `/api/reservas/relatorio/xml` | Exportar em XML |
+| `GET` | `/api/reservas/relatorio/txt` | Exportar em TXT |
+
+---
+
+## 📁 Estrutura do projeto
+
+```
+ProjetoCamadaNegocios2/
+├── src/main/java/com/airbnbclone/
+│   ├── AirbnbCloneApplication.java        # Aplicação principal
+│   ├── controller/                        # Controladores REST
+│   ├── service/                           # Lógica de negócio
+│   ├── repository/                        # Acesso a dados (MongoDB)
+│   ├── model/                             # Entidades (Usuario, Local, Reserva)
+│   ├── dto/                               # Data Transfer Objects
+│   ├── util/                              # Utilitários
+│   ├── seed/                              # Dados iniciais
+│   └── cli/                               # Interface CLI
+├── src/main/resources/
+│   └── application.properties             # Configurações Spring Boot
+├── pom.xml                                # Dependências Maven
+├── FrontEnd/                              # Aplicação React
+│   ├── src/
+│   │   ├── pages/                         # Páginas
+│   │   ├── components/                    # Componentes React
+│   │   ├── hooks/                         # Custom hooks
+│   │   ├── utils/                         # Funções utilitárias
+│   │   └── App.jsx
+│   ├── package.json
+│   └── vite.config.js
+└── README.md                              # Este arquivo
+```
+
+---
+
+## 🛠️ Requisitos de Java Implementados
+
+- ✅ **Annotations customizadas** (@ValidEmail, @UniqueEmail)
+- ✅ **Reflection** para validação genérica
+- ✅ **Collections** (List, Set, Map) para manipulação de dados
+- ✅ **Streams** para processamento funcional
+- ✅ **Padrões de Design** (Repository, Service, DTO)
+- ✅ **Tratamento de exceções** customizado
+- ✅ **Serialização** JSON com Jackson
+- ✅ **Geração de relatórios** XML e TXT
+
+---
+
+## 🧪 Testes
+
+Execute os testes com:
+
+```bash
+mvn test
+```
+
+---
+
+## 📝 Variáveis de Ambiente
+
+Você pode customizar as configurações via variáveis de ambiente:
+
+```bash
+export MONGO_URI=mongodb://seu-host:27017/airbnb_clone
+export SERVER_PORT=5000
+export SPRING_PROFILES_ACTIVE=dev
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### MongoDB não conecta (Linux)
+```bash
+# Obter IP do container
+docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mongodb
+
+# Atualizar application.properties com o IP
+spring.data.mongodb.uri=mongodb://IP:27017/airbnb_clone
+```
+
+### Erro de porta já em uso
+```bash
+# Liberar a porta (ex: 5000)
+lsof -i :5000
+kill -9 <PID>
+```
+
+### Frontend não conecta ao backend
+- Verifique se o backend está rodando em `http://localhost:5000`
+- Limpe o cache do navegador (Ctrl+Shift+Delete)
+- Revise o console do navegador para erros de CORS
+
+---
+
+## 📄 Licença
+
+Projeto acadêmico — livre para uso educacional.
+
+---
+
+## 👥 Autores
+
+- **Francisco Sousa** (CiscG)
+
+---
+
+## 🔗 Links úteis
+
+- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
+- [MongoDB Docs](https://docs.mongodb.com/)
+- [React Documentation](https://react.dev)
+- [Vite Guide](https://vitejs.dev/guide/)
