@@ -1,206 +1,159 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit2, Mail, Phone } from 'lucide-react'
-import { api } from '../api/viagensApi'
+import { useCallback, useEffect, useState } from 'react'
+import { CalendarRange, Home, LayoutDashboard, UserRound } from 'lucide-react'
+import { api } from '../api/client'
+import ReservationCard from '../components/ReservationCard'
+import { PageLoader } from '../components/LoadingSpinner'
+import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import ToastContainer from '../components/ToastContainer'
 
-export default function ClientesPage() {
-  const [clientes, setClientes] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    cpf: '',
-    idade: '',
-    renda: '',
-  })
-  const { addToast } = useToast()
-
-  useEffect(() => {
-    carregarClientes()
-  }, [])
-
-  const carregarClientes = async () => {
-    try {
-      setLoading(true)
-      const response = await api.getClientes()
-      setClientes(response.clientes || [])
-    } catch (error) {
-      addToast('Erro ao carregar clientes: ' + error.message, 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm(prev => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    try {
-      if (!form.nome.trim()) throw new Error('Nome é obrigatório')
-      if (!form.email.trim()) throw new Error('Email é obrigatório')
-      if (!form.cpf.trim()) throw new Error('CPF é obrigatório')
-
-      const clienteData = {
-        nome: form.nome,
-        email: form.email,
-        telefone: form.telefone,
-        cpf: form.cpf,
-        idade: parseInt(form.idade) || 0,
-        renda: parseFloat(form.renda) || 0,
-        ativo: true,
-      }
-
-      await api.createCliente(clienteData)
-      addToast('Cliente criado com sucesso!', 'success')
-      setForm({ nome: '', email: '', telefone: '', cpf: '', idade: '', renda: '' })
-      setShowForm(false)
-      carregarClientes()
-    } catch (error) {
-      addToast(error.message || 'Erro ao criar cliente', 'error')
-    }
-  }
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Tem certeza que deseja deletar este cliente?')) return
-
-    try {
-      await api.deleteCliente(id)
-      addToast('Cliente deletado com sucesso!', 'success')
-      carregarClientes()
-    } catch (error) {
-      addToast('Erro ao deletar: ' + error.message, 'error')
-    }
+function OccupancyList({ periods }) {
+  if (!periods.length) {
+    return <p className="text-sm text-gray-500">Nenhum período ocupado até o momento.</p>
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pt-8">
-      <ToastContainer />
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">👥 Clientes</h1>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center gap-2"
-          >
-            <Plus size={20} />
-            Novo Cliente
-          </button>
+    <div className="space-y-2">
+      {periods.map((period, index) => (
+        <div key={`${period.desde}-${period.ate}-${index}`} className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {new Date(period.desde).toLocaleDateString('pt-BR')} até {new Date(period.ate).toLocaleDateString('pt-BR')}
         </div>
+      ))}
+    </div>
+  )
+}
 
-        {/* Formulário */}
-        {showForm && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 className="text-xl font-bold mb-4">Criar Novo Cliente</h2>
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                name="nome"
-                value={form.nome}
-                onChange={handleChange}
-                placeholder="Nome"
-                className="col-span-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="Email"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="tel"
-                name="telefone"
-                value={form.telefone}
-                onChange={handleChange}
-                placeholder="Telefone"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="text"
-                name="cpf"
-                value={form.cpf}
-                onChange={handleChange}
-                placeholder="CPF"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="number"
-                name="idade"
-                value={form.idade}
-                onChange={handleChange}
-                placeholder="Idade"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="number"
-                name="renda"
-                value={form.renda}
-                onChange={handleChange}
-                placeholder="Renda"
-                step="0.01"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <button
-                type="submit"
-                className="col-span-2 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
-              >
-                Salvar Cliente
-              </button>
-            </form>
+export default function DashboardPage() {
+  const { user, isGuest, isHost } = useAuth()
+  const { addToast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [reservas, setReservas] = useState([])
+  const [imoveis, setImoveis] = useState([])
+  const [ocupacoes, setOcupacoes] = useState({})
+
+  const loadDashboard = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      const [guestReservations, hostListings] = await Promise.all([
+        isGuest ? api.getReservas({ hospede_id: user.id }) : Promise.resolve([]),
+        isHost ? api.getLocais({ anfitriao_id: user.id }) : Promise.resolve([]),
+      ])
+
+      const occupancyEntries = await Promise.all(
+        hostListings.map(async (listing) => [listing.id, await api.getOcupacao(listing.id).catch(() => [])])
+      )
+
+      setReservas(guestReservations)
+      setImoveis(hostListings)
+      setOcupacoes(Object.fromEntries(occupancyEntries))
+    } catch (error) {
+      addToast(error.message || 'Erro ao carregar dashboard.', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }, [addToast, isGuest, isHost, user?.id])
+
+  useEffect(() => {
+    loadDashboard()
+  }, [loadDashboard])
+
+  if (loading) {
+    return <PageLoader />
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <span className="inline-flex rounded-full bg-rose-50 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+              Dashboard
+            </span>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">Olá, {user.nome}</h1>
+            <p className="mt-2 text-sm text-gray-500">Acompanhe reservas, imóveis publicados e períodos já ocupados.</p>
           </div>
-        )}
-
-        {/* Lista de Clientes */}
-        <div className="grid gap-4">
-          {loading ? (
-            <div className="text-center py-12 bg-white rounded-lg">
-              <p className="text-gray-600">Carregando clientes...</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              <LayoutDashboard className="mx-auto mb-2 text-primary" size={18} />
+              <p className="text-2xl font-bold text-gray-900">{reservas.length}</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Reservas</p>
             </div>
-          ) : clientes.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg">
-              <p className="text-gray-600">Nenhum cliente cadastrado</p>
+            <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              <Home className="mx-auto mb-2 text-primary" size={18} />
+              <p className="text-2xl font-bold text-gray-900">{imoveis.length}</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Imóveis</p>
             </div>
-          ) : (
-            clientes.map(cliente => (
-              <div key={cliente.id} className="bg-white rounded-lg shadow p-4 flex justify-between items-center">
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg text-gray-800">{cliente.nome}</h3>
-                  <div className="flex gap-4 text-sm text-gray-600 mt-2">
-                    <div className="flex items-center gap-1">
-                      <Mail size={16} />
-                      {cliente.email}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Phone size={16} />
-                      {cliente.telefone}
-                    </div>
-                    <span>CPF: {cliente.cpf}</span>
-                    <span>Idade: {cliente.idade}</span>
-                    <span>Renda: R$ {cliente.renda?.toFixed(2)}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDelete(cliente.id)}
-                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            ))
-          )}
+            <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              <UserRound className="mx-auto mb-2 text-primary" size={18} />
+              <p className="text-2xl font-bold text-gray-900">{user.tipo}</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Perfil</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {isGuest && (
+        <section className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <CalendarRange className="text-primary" size={20} />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Minhas reservas</h2>
+              <p className="text-sm text-gray-500">Reservas associadas ao seu perfil de hóspede.</p>
+            </div>
+          </div>
+
+          {reservas.length === 0 ? (
+            <p className="text-sm text-gray-500">Você ainda não possui reservas cadastradas.</p>
+          ) : (
+            <div className="space-y-4">
+              {reservas.map((reserva) => (
+                <ReservationCard key={reserva.id} reservation={reserva} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {isHost && (
+        <section className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <Home className="text-primary" size={20} />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Meus imóveis</h2>
+              <p className="text-sm text-gray-500">Acompanhe os anúncios publicados e os períodos ocupados.</p>
+            </div>
+          </div>
+
+          {imoveis.length === 0 ? (
+            <p className="text-sm text-gray-500">Nenhum imóvel cadastrado para este anfitrião.</p>
+          ) : (
+            <div className="grid gap-5 lg:grid-cols-2">
+              {imoveis.map((imovel) => (
+                <article key={imovel.id} className="rounded-2xl border border-gray-100 bg-stone-50 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{imovel.nome}</h3>
+                      <p className="mt-1 text-sm text-gray-500">{imovel.cidade}, {imovel.estado}</p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-primary shadow-sm">
+                      R$ {imovel.preco_por_noite?.toLocaleString('pt-BR')}/noite
+                    </span>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-6 text-gray-600">{imovel.descricao}</p>
+
+                  <div className="mt-5">
+                    <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                      Visualização de períodos ocupados
+                    </h4>
+                    <OccupancyList periods={ocupacoes[imovel.id] || []} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }

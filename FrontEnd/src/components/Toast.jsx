@@ -1,4 +1,3 @@
-import React from 'react'
 import { AlertCircle } from 'lucide-react'
 
 export default function Toast({ toast, onClose }) {
@@ -10,13 +9,10 @@ export default function Toast({ toast, onClose }) {
   }[toast.type] || 'bg-gray-500'
 
   return (
-    <div className={`${bgColor} text-white p-4 rounded shadow-lg flex items-center gap-2`}>
+    <div className={`${bgColor} animate-slide-in flex items-center gap-2 rounded-2xl p-4 text-white shadow-lg`}>
       <AlertCircle size={20} />
       <span>{toast.message}</span>
-      <button
-        onClick={onClose}
-        className="ml-auto text-white hover:opacity-80 transition"
-      >
+      <button onClick={onClose} className="ml-auto text-white transition hover:opacity-80">
         ✕
       </button>
     </div>
