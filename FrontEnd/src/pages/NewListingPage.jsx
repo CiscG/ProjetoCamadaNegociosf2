@@ -1,185 +1,226 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PlusCircle, X, Building2 } from 'lucide-react'
-import { api } from '../api/client'
-import { useAuth } from '../context/AuthContext'
+import { api } from '../api/viagensApi'
 import { useToast } from '../context/ToastContext'
-import LoadingSpinner from '../components/LoadingSpinner'
+import ToastContainer from '../components/ToastContainer'
 
-const AMENITY_OPTIONS = ['WiFi', 'Ar-condicionado', 'Estacionamento', 'Piscina', 'Cozinha', 'Lavanderia', 'TV', 'Academia']
+const TIPOS_VIAGEM = [
+  { value: 'NACIONAL', label: 'Viagem Nacional' },
+  { value: 'INTERNACIONAL', label: 'Viagem Internacional' },
+  { value: 'TURISMO_RELIGIOSO', label: 'Turismo Religioso' },
+  { value: 'TURISMO_AVENTURA', label: 'Turismo de Aventura' },
+  { value: 'TURISMO_PRAIA', label: 'Turismo de Praia' },
+  { value: 'TURISMO_CULTURAL', label: 'Turismo Cultural' },
+  { value: 'TURISMO_NEGOCIOS', label: 'Turismo de Negócios' },
+]
 
-export default function NewListingPage() {
-  const { user } = useAuth()
-  const toast = useToast()
-  const navigate = useNavigate()
-
+export default function NewViagemPage() {
   const [form, setForm] = useState({
-    nome: '',
-    cidade: '',
-    estado: '',
+    destino: '',
+    tipo: 'NACIONAL',
+    dataPartida: '',
+    dataRetorno: '',
+    preco: '',
+    vagas: '',
     descricao: '',
-    preco_por_noite: '',
-    comodidades: [],
+    ativa: true,
   })
   const [loading, setLoading] = useState(false)
+  const { addToast } = useToast()
+  const navigate = useNavigate()
 
-  const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
-
-  const toggleAmenity = (a) => {
-    setForm((f) => ({
-      ...f,
-      comodidades: f.comodidades.includes(a) ? f.comodidades.filter((x) => x !== a) : [...f.comodidades, a],
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
     }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.nome || !form.cidade || !form.estado || !form.preco_por_noite) {
-      return toast('Preencha nome, cidade, estado e preço por noite.', 'error')
-    }
-    const price = parseFloat(form.preco_por_noite)
-    if (isNaN(price) || price <= 0) return toast('Preço inválido.', 'error')
-
     setLoading(true)
+
     try {
-      await api.createLocal({
-        ...form,
-        preco_por_noite: price,
-        anfitriao_id: user.id,
-      })
-      toast('Imóvel anunciado com sucesso! 🏠', 'success')
-      navigate('/dashboard')
-    } catch (err) {
-      toast(err.message, 'error')
+      // Validações
+      if (!form.destino.trim()) throw new Error('Destino é obrigatório')
+      if (!form.dataPartida) throw new Error('Data de partida é obrigatória')
+      if (!form.dataRetorno) throw new Error('Data de retorno é obrigatória')
+      if (new Date(form.dataPartida) >= new Date(form.dataRetorno)) {
+        throw new Error('Data de partida deve ser anterior à data de retorno')
+      }
+      if (!form.preco || isNaN(form.preco)) throw new Error('Preço inválido')
+      if (!form.vagas || isNaN(form.vagas)) throw new Error('Vagas inválido')
+
+      const viagemData = {
+        destino: form.destino,
+        tipo: form.tipo,
+        dataPartida: form.dataPartida,
+        dataRetorno: form.dataRetorno,
+        preco: parseFloat(form.preco),
+        vagas: parseInt(form.vagas),
+        descricao: form.descricao,
+        ativa: form.ativa,
+      }
+
+      await api.createViagem(viagemData)
+      addToast('Viagem criada com sucesso!', 'success')
+      navigate('/')
+    } catch (error) {
+      addToast(error.message || 'Erro ao criar viagem', 'error')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-        {/* Page header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-            <Building2 size={20} className="text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Anunciar imóvel</h1>
-            <p className="text-gray-500 text-sm">Preencha os detalhes do seu espaço</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50 p-4 pt-8">
+      <ToastContainer />
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
+        <h1 className="text-3xl font-bold mb-8">✈️ Criar Nova Viagem</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic info */}
-          <section className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h2 className="font-semibold text-gray-900 mb-4">Informações básicas</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome do imóvel *</label>
-                <input
-                  type="text"
-                  value={form.nome}
-                  onChange={(e) => set('nome', e.target.value)}
-                  placeholder="Ex: Apartamento moderno no centro"
-                  className="input-field"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Cidade *</label>
-                <input
-                  type="text"
-                  value={form.cidade}
-                  onChange={(e) => set('cidade', e.target.value)}
-                  placeholder="Ex: São Paulo"
-                  className="input-field"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado *</label>
-                <input
-                  type="text"
-                  value={form.estado}
-                  onChange={(e) => set('estado', e.target.value)}
-                  placeholder="Ex: SP"
-                  className="input-field"
-                  maxLength={2}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
-                <textarea
-                  value={form.descricao}
-                  onChange={(e) => set('descricao', e.target.value)}
-                  placeholder="Descreva seu imóvel, diferenciais, regras..."
-                  rows={4}
-                  className="input-field resize-none"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Pricing */}
-          <section className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h2 className="font-semibold text-gray-900 mb-4">Precificação</h2>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Preço por noite (R$) *</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">R$</span>
-                <input
-                  type="number"
-                  value={form.preco_por_noite}
-                  onChange={(e) => set('preco_por_noite', e.target.value)}
-                  placeholder="0,00"
-                  className="input-field pl-10"
-                  min="1"
-                  step="0.01"
-                  required
-                />
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Destino *
+              </label>
+              <input
+                type="text"
+                name="destino"
+                value={form.destino}
+                onChange={handleChange}
+                placeholder="Ex: Rio de Janeiro"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
             </div>
-          </section>
 
-          {/* Amenities */}
-          <section className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h2 className="font-semibold text-gray-900 mb-4">Comodidades</h2>
-            <div className="flex flex-wrap gap-2">
-              {AMENITY_OPTIONS.map((a) => {
-                const selected = form.comodidades.includes(a)
-                return (
-                  <button
-                    key={a}
-                    type="button"
-                    onClick={() => toggleAmenity(a)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border transition-all ${
-                      selected
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary'
-                    }`}
-                  >
-                    {selected && <X size={12} />}
-                    {a}
-                  </button>
-                )
-              })}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Viagem *
+              </label>
+              <select
+                name="tipo"
+                value={form.tipo}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                {TIPOS_VIAGEM.map(tipo => (
+                  <option key={tipo.value} value={tipo.value}>
+                    {tipo.label}
+                  </option>
+                ))}
+              </select>
             </div>
-            {form.comodidades.length > 0 && (
-              <p className="text-xs text-gray-500 mt-3">{form.comodidades.length} comodidade{form.comodidades.length !== 1 ? 's' : ''} selecionada{form.comodidades.length !== 1 ? 's' : ''}</p>
-            )}
-          </section>
+          </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button type="button" onClick={() => navigate(-1)} className="btn-ghost flex-1 border border-gray-200">
-              Cancelar
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Data de Partida *
+              </label>
+              <input
+                type="date"
+                name="dataPartida"
+                value={form.dataPartida}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Data de Retorno *
+              </label>
+              <input
+                type="date"
+                name="dataRetorno"
+                value={form.dataRetorno}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preço (R$) *
+              </label>
+              <input
+                type="number"
+                name="preco"
+                value={form.preco}
+                onChange={handleChange}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Vagas Disponíveis *
+              </label>
+              <input
+                type="number"
+                name="vagas"
+                value={form.vagas}
+                onChange={handleChange}
+                placeholder="0"
+                min="0"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descrição
+            </label>
+            <textarea
+              name="descricao"
+              value={form.descricao}
+              onChange={handleChange}
+              placeholder="Descreva a viagem..."
+              rows="4"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              name="ativa"
+              checked={form.ativa}
+              onChange={handleChange}
+              className="w-4 h-4 text-blue-600 rounded"
+            />
+            <label className="ml-2 text-sm font-medium text-gray-700">
+              Viagem Ativa
+            </label>
+          </div>
+
+          <div className="flex gap-4 pt-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {loading ? 'Salvando...' : 'Criar Viagem'}
             </button>
-            <button type="submit" disabled={loading} className="btn-primary flex-1 py-3.5">
-              {loading ? <LoadingSpinner size="sm" className="border-white border-t-transparent" /> : (
-                <><PlusCircle size={16} /> Publicar imóvel</>
-              )}
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-medium hover:bg-gray-400 transition"
+            >
+              Cancelar
             </button>
           </div>
         </form>

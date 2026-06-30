@@ -175,15 +175,24 @@ O banco é populado automaticamente na primeira inicialização (classe `SeedDat
 ```
 ProjetoCamadaNegocios2/
 ├── src/main/java/com/airbnbclone/
-│   ├── AirbnbCloneApplication.java        # Aplicação principal
-│   ├── controller/                        # Controladores REST
-│   ├── service/                           # Lógica de negócio
+│   ├── AirbnbCloneApplication.java        # Aplicação principal (Spring Boot)
+│   ├── controller/                        # Controladores REST (Airbnb)
+│   ├── service/                           # Lógica de negócio (Airbnb)
 │   ├── repository/                        # Acesso a dados (MongoDB)
 │   ├── model/                             # Entidades (Usuario, Local, Reserva)
 │   ├── dto/                               # Data Transfer Objects
 │   ├── util/                              # Utilitários
 │   ├── seed/                              # Dados iniciais
 │   └── cli/                               # Interface CLI
+├── src/main/java/com/travelagency/
+│   ├── TravelAgencyApplication.java       # Módulo de requisitos Java
+│   ├── controller/                        # Controladores REST (Viagens/Clientes)
+│   ├── service/                           # Serviços com try-catch-finally, concorrência
+│   ├── repository/                        # Repositórios com tipos genéricos
+│   ├── model/                             # Modelos (Viagem, Cliente, Reserva, TipoViagem)
+│   ├── exception/                         # Exceções verificadas e não verificadas
+│   ├── config/                            # Configuração CORS
+│   └── util/                              # LoggerUtil, ArquivoUtil, XMLUtil
 ├── src/main/resources/
 │   └── application.properties             # Configurações Spring Boot
 ├── pom.xml                                # Dependências Maven
@@ -191,8 +200,8 @@ ProjetoCamadaNegocios2/
 │   ├── src/
 │   │   ├── pages/                         # Páginas
 │   │   ├── components/                    # Componentes React
-│   │   ├── hooks/                         # Custom hooks
-│   │   ├── utils/                         # Funções utilitárias
+│   │   ├── context/                       # Context API (Auth, Toast)
+│   │   ├── api/                           # Integração com backend
 │   │   └── App.jsx
 │   ├── package.json
 │   └── vite.config.js
@@ -203,14 +212,22 @@ ProjetoCamadaNegocios2/
 
 ## 🛠️ Requisitos de Java Implementados
 
-- ✅ **Annotations customizadas** (@ValidEmail, @UniqueEmail)
-- ✅ **Reflection** para validação genérica
-- ✅ **Collections** (List, Set, Map) para manipulação de dados
-- ✅ **Streams** para processamento funcional
-- ✅ **Padrões de Design** (Repository, Service, DTO)
-- ✅ **Tratamento de exceções** customizado
-- ✅ **Serialização** JSON com Jackson
-- ✅ **Geração de relatórios** XML e TXT
+O módulo `com.travelagency` demonstra a implementação de todos os 14 requisitos Java:
+
+✅ Wrapper classes e Autoboxing (`model/Cliente.java`)
+✅ Tipos Genéricos e Enumeration (`model/TipoViagem.java`, `repository/ViagemRepository.java`)
+✅ Records, Text blocks e Blocos estáticos (`TravelAgencyApplication.java`)
+✅ Tipos de Exceções verificadas e não verificadas (`exception/`)
+✅ Blocos try-catch-finally (`service/ViagemService.java`)
+✅ Criação e Lançamento de exceções (`service/ViagemService.java`)
+✅ Referência this e super (`service/ClienteService.java`)
+✅ Persistência e recuperação de objetos (`model/Viagem.java`, `model/Cliente.java`)
+✅ Leitura e gravação de arquivos texto (`util/ArquivoUtil.java`)
+✅ Manipulação de Dados (`service/ViagemService.java`)
+✅ Manipulação de XML (`util/XMLUtil.java`)
+✅ Logging de Sistema (`util/LoggerUtil.java`)
+✅ Programação Concorrente (`service/ViagemService.java`)
+✅ Desenvolvimento de Componentes de Serviços REST (`controller/`)
 
 ---
 
