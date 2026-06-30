@@ -1,7 +1,6 @@
 package com.travelagency.service;
 
 import com.travelagency.exception.ClienteInvalidoException;
-import com.travelagency.exception.ViagemNotFoundException;
 import com.travelagency.model.Cliente;
 import com.travelagency.repository.ClienteRepository;
 import com.travelagency.util.LoggerUtil;
@@ -31,7 +30,7 @@ public class ClienteService {
      * Busca cliente por ID com try-catch-finally
      * Requisito: Blocos try-catch-finally
      */
-    public Cliente buscarClienteById(String id) throws ViagemNotFoundException {
+    public Cliente buscarClienteById(String id) {
         try {
             if (id == null || id.isEmpty()) {
                 throw new ClienteInvalidoException("ID do cliente não pode ser vazio", id);
@@ -40,7 +39,7 @@ public class ClienteService {
             Optional<Cliente> cliente = clienteRepository.findById(id);
             
             if (cliente.isEmpty()) {
-                throw new ViagemNotFoundException("Cliente não encontrado com ID: " + id, id);
+                throw new ClienteInvalidoException("Cliente não encontrado com ID: " + id, id);
             }
             
             logger.info("Cliente encontrado: " + cliente.get().getNome());
@@ -51,7 +50,7 @@ public class ClienteService {
             throw e;
         } catch (Exception e) {
             logger.error("Erro ao buscar cliente: " + e.getMessage());
-            throw new ViagemNotFoundException("Erro ao buscar cliente", e);
+            throw new ClienteInvalidoException("Erro ao buscar cliente: " + e.getMessage(), id);
         } finally {
             logger.info("Finalizada busca de cliente com ID: " + id);
         }

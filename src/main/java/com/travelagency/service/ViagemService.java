@@ -79,8 +79,8 @@ public class ViagemService {
             if (viagem.getDataPartida() == null || viagem.getDataRetorno() == null) {
                 throw new DatasInvalidasException(
                     "Datas de partida e retorno são obrigatórias",
-                    viagem.getDataPartida().toString(),
-                    viagem.getDataRetorno().toString()
+                    String.valueOf(viagem.getDataPartida()),
+                    String.valueOf(viagem.getDataRetorno())
                 );
             }
             

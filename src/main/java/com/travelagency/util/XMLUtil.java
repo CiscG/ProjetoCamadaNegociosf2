@@ -145,8 +145,12 @@ public class XMLUtil {
      */
     public static void salvarXMLArquivo(String xml, String nomeArquivo) {
         try {
-            String caminhoCompleto = "relatorios/" + nomeArquivo + ".xml";
-            File file = new File(caminhoCompleto);
+            String nomeSanitizado = nomeArquivo.replaceAll("[^a-zA-Z0-9_\\-]", "_");
+            String caminhoCompleto = "relatorios/" + nomeSanitizado + ".xml";
+            File file = new File("relatorios", nomeSanitizado + ".xml").getCanonicalFile();
+            if (!file.getParentFile().getCanonicalPath().equals(new File("relatorios").getCanonicalPath())) {
+                throw new SecurityException("Caminho de arquivo invalido: " + nomeArquivo);
+            }
             
             Transformer transformer = TransformerFactory.newInstance().newTransformer();
             transformer.setOutputProperty("indent", "yes");

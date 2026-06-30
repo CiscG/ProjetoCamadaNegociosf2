@@ -1,7 +1,6 @@
 package com.travelagency.controller;
 
 import com.travelagency.exception.ClienteInvalidoException;
-import com.travelagency.exception.ViagemNotFoundException;
 import com.travelagency.model.Cliente;
 import com.travelagency.service.ClienteService;
 import com.travelagency.util.LoggerUtil;
@@ -69,7 +68,7 @@ public class ClienteController {
             
             return ResponseEntity.ok(response);
             
-        } catch (ViagemNotFoundException e) {
+        } catch (ClienteInvalidoException e) {
             logger.error("Cliente não encontrado: " + id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("status", "erro", "mensagem", e.getMessage()));
@@ -198,7 +197,7 @@ public class ClienteController {
                     .header("Content-Type", "application/xml")
                     .body(xml);
             
-        } catch (ViagemNotFoundException e) {
+        } catch (ClienteInvalidoException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (Exception e) {
             logger.error("Erro ao exportar XML: " + e.getMessage());
