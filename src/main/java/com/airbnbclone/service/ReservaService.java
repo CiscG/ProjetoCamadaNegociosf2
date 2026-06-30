@@ -1,14 +1,14 @@
 package com.airbnbclone.service;
 
-import com.airbnbclone.dto.LocalResponse;
 import com.airbnbclone.dto.OcupacaoResponse;
+import com.airbnbclone.dto.PropriedadeResponse;
 import com.airbnbclone.dto.ReservaRequest;
 import com.airbnbclone.dto.ReservaResponse;
 import com.airbnbclone.model.Datas;
-import com.airbnbclone.model.Local;
+import com.airbnbclone.model.Propriedade;
 import com.airbnbclone.model.Reserva;
 import com.airbnbclone.model.Usuario;
-import com.airbnbclone.repository.LocalRepository;
+import com.airbnbclone.repository.PropriedadeRepository;
 import com.airbnbclone.repository.ReservaRepository;
 import com.airbnbclone.repository.UsuarioRepository;
 import org.springframework.data.domain.Sort;
@@ -28,20 +28,22 @@ import java.util.stream.Collectors;
 public class ReservaService {
 
     private final ReservaRepository reservaRepository;
-    private final LocalRepository localRepository;
+    private final PropriedadeRepository propriedadeRepository;
     private final UsuarioRepository usuarioRepository;
     private final MongoTemplate mongoTemplate;
-    private final LocalService localService;
+    private final PropriedadeService propriedadeService;
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public ReservaService(ReservaRepository reservaRepository, LocalRepository localRepository,
-                          UsuarioRepository usuarioRepository, MongoTemplate mongoTemplate,
-                          LocalService localService) {
+    public ReservaService(ReservaRepository reservaRepository,
+                          PropriedadeRepository propriedadeRepository,
+                          UsuarioRepository usuarioRepository,
+                          MongoTemplate mongoTemplate,
+                          PropriedadeService propriedadeService) {
         this.reservaRepository = reservaRepository;
-        this.localRepository = localRepository;
+        this.propriedadeRepository = propriedadeRepository;
         this.usuarioRepository = usuarioRepository;
         this.mongoTemplate = mongoTemplate;
-        this.localService = localService;
+        this.propriedadeService = propriedadeService;
     }
 
     public ReservaResponse criar(ReservaRequest req) {
@@ -51,8 +53,8 @@ public class ReservaService {
         if (!checkout.isAfter(checkin))
             throw new IllegalArgumentException("Checkout deve ser posterior ao checkin.");
 
-        Local local = localRepository.findById(req.localId())
-                .orElseThrow(() -> new IllegalArgumentException("Imovel nao encontrado."));
+        Propriedade propriedade = propriedadeRepository.findById(req.propriedadeId())
+                .orElseThrow(() -> new IllegalArgumentException("Propriedade nao encontrada."));
 
         Usuario hospede = usuarioRepository.findById(req.hospedeId())
                 .orElseThrow(() -> new IllegalArgumentException("Hospede nao encontrado."));
@@ -60,31 +62,31 @@ public class ReservaService {
             throw new IllegalArgumentException("Somente hospedes podem fazer reservas.");
 
         Query conflictQuery = new Query(
-                Criteria.where("local_id").is(req.localId())
+                Criteria.where("propriedade_id").is(req.propriedadeId())
                         .and("status").is("confirmada")
                         .and("datas.checkin").lt(checkout)
                         .and("datas.checkout").gt(checkin)
         );
         if (mongoTemplate.exists(conflictQuery, Reserva.class))
-            throw new ConflictException("Este local ja esta reservado para estas datas.");
+            throw new ConflictException("Esta propriedade ja esta reservada para estas datas.");
 
         long noites = ChronoUnit.DAYS.between(checkin, checkout);
 
         Reserva reserva = new Reserva();
-        reserva.setLocalId(req.localId());
+        reserva.setPropriedadeId(req.propriedadeId());
         reserva.setHospedeId(req.hospedeId());
         reserva.setDatas(new Datas(checkin, checkout));
-        reserva.setValorTotal(local.getPrecoPorNoite() * noites);
+        reserva.setValorTotal(propriedade.getPrecoPorNoite() * noites);
         reserva.setStatus("confirmada");
         reserva.setDataReserva(LocalDateTime.now());
 
         Reserva salva = reservaRepository.save(reserva);
 
-        Map<String, Usuario> anfitrioes = usuarioRepository.findById(local.getAnfitriaoId())
+        Map<String, Usuario> anfitrioes = usuarioRepository.findById(propriedade.getAnfitriaoId())
                 .map(u -> Map.of(u.getId(), u)).orElse(Map.of());
-        LocalResponse localResponse = localService.toResponse(local, anfitrioes);
+        PropriedadeResponse propriedadeResponse = propriedadeService.toResponse(propriedade, anfitrioes);
 
-        return toResponse(salva, localResponse);
+        return toResponse(salva, propriedadeResponse);
     }
 
     public List<ReservaResponse> listar(String hospedeId, String anfitriaoId, String status) {
@@ -97,10 +99,11 @@ public class ReservaService {
             criterias.add(Criteria.where("status").is(status));
 
         if (anfitriaoId != null && !anfitriaoId.isBlank()) {
-            List<Local> locaisAnfitriao = localRepository.findByAnfitriaoId(anfitriaoId);
-            if (locaisAnfitriao.isEmpty()) return List.of();
-            List<String> localIds = locaisAnfitriao.stream().map(Local::getId).toList();
-            criterias.add(Criteria.where("local_id").in(localIds));
+            List<Propriedade> propriedadesAnfitriao = propriedadeRepository.findByAnfitriaoId(anfitriaoId);
+            if (propriedadesAnfitriao.isEmpty()) return List.of();
+            List<String> propriedadeIds = propriedadesAnfitriao.stream()
+                    .map(Propriedade::getId).toList();
+            criterias.add(Criteria.where("propriedade_id").in(propriedadeIds));
         }
 
         if (!criterias.isEmpty())
@@ -110,25 +113,26 @@ public class ReservaService {
 
         List<Reserva> reservas = mongoTemplate.find(query, Reserva.class);
 
-        Set<String> localIds = reservas.stream().map(Reserva::getLocalId).collect(Collectors.toSet());
-        Map<String, Local> locaisMap = localRepository.findAllById(localIds)
-                .stream().collect(Collectors.toMap(Local::getId, l -> l));
+        Set<String> propriedadeIds = reservas.stream()
+                .map(Reserva::getPropriedadeId).collect(Collectors.toSet());
+        Map<String, Propriedade> propriedadesMap = propriedadeRepository.findAllById(propriedadeIds)
+                .stream().collect(Collectors.toMap(Propriedade::getId, p -> p));
 
-        Set<String> anfitriaoIds = locaisMap.values().stream()
-                .map(Local::getAnfitriaoId).collect(Collectors.toSet());
+        Set<String> anfitriaoIds = propriedadesMap.values().stream()
+                .map(Propriedade::getAnfitriaoId).collect(Collectors.toSet());
         Map<String, Usuario> anfitrioes = usuarioRepository.findAllById(anfitriaoIds)
                 .stream().collect(Collectors.toMap(Usuario::getId, u -> u));
 
         return reservas.stream().map(r -> {
-            Local l = locaisMap.get(r.getLocalId());
-            LocalResponse localResp = l != null ? localService.toResponse(l, anfitrioes) : null;
-            return toResponse(r, localResp);
+            Propriedade p = propriedadesMap.get(r.getPropriedadeId());
+            PropriedadeResponse propResp = p != null ? propriedadeService.toResponse(p, anfitrioes) : null;
+            return toResponse(r, propResp);
         }).collect(Collectors.toList());
     }
 
-    public List<OcupacaoResponse> ocupacao(String localId) {
+    public List<OcupacaoResponse> ocupacao(String propriedadeId) {
         Query query = new Query(
-                Criteria.where("local_id").is(localId).and("status").is("confirmada")
+                Criteria.where("propriedade_id").is(propriedadeId).and("status").is("confirmada")
         );
         return mongoTemplate.find(query, Reserva.class).stream()
                 .map(r -> new OcupacaoResponse(
@@ -137,17 +141,17 @@ public class ReservaService {
                 .collect(Collectors.toList());
     }
 
-    public ReservaResponse toResponse(Reserva reserva, LocalResponse local) {
+    public ReservaResponse toResponse(Reserva reserva, PropriedadeResponse propriedade) {
         return new ReservaResponse(
                 reserva.getId(),
-                reserva.getLocalId(),
+                reserva.getPropriedadeId(),
                 reserva.getHospedeId(),
                 reserva.getDatas().getCheckin().format(DATE_FMT),
                 reserva.getDatas().getCheckout().format(DATE_FMT),
                 reserva.getValorTotal(),
                 reserva.getStatus(),
                 reserva.getDataReserva().format(DATE_FMT),
-                local
+                propriedade
         );
     }
 }

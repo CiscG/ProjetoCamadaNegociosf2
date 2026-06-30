@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 public class Reserva {
     @Id
     private String id;
-    @Field("local_id")
-    private String localId;
+    @Field("propriedade_id")
+    private String propriedadeId;
     @Field("hospede_id")
     private String hospedeId;
     private Datas datas;
@@ -25,8 +25,8 @@ public class Reserva {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-    public String getLocalId() { return localId; }
-    public void setLocalId(String localId) { this.localId = localId; }
+    public String getPropriedadeId() { return propriedadeId; }
+    public void setPropriedadeId(String propriedadeId) { this.propriedadeId = propriedadeId; }
     public String getHospedeId() { return hospedeId; }
     public void setHospedeId(String hospedeId) { this.hospedeId = hospedeId; }
     public Datas getDatas() { return datas; }

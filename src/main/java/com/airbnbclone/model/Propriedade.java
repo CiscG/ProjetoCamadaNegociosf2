@@ -7,8 +7,8 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Document(collection = "locais")
-public class Local {
+@Document(collection = "propriedades")
+public class Propriedade {
     @Id
     private String id;
     @Field("anfitriao_id")
@@ -22,7 +22,7 @@ public class Local {
     @Field("data_cadastro")
     private LocalDateTime dataCadastro;
 
-    public Local() {}
+    public Propriedade() {}
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
