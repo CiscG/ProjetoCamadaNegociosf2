@@ -1,163 +1,164 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit2, MapPin, Calendar, DollarSign } from 'lucide-react'
-import { api } from '../api/viagensApi'
+import { useEffect, useState } from 'react'
+import { SlidersHorizontal } from 'lucide-react'
+import { api } from '../api/client'
+import ListingCard from '../components/ListingCard'
+import SearchBar from '../components/SearchBar'
+import { PageLoader } from '../components/LoadingSpinner'
 import { useToast } from '../context/ToastContext'
-import { useNavigate } from 'react-router-dom'
-import ToastContainer from '../components/ToastContainer'
+
+const DEFAULT_FILTERS = {
+  cidade: '',
+  preco_max: '',
+  avaliacao: '',
+  checkin: '',
+  checkout: '',
+}
+
+function rangesOverlap(startA, endA, startB, endB) {
+  return new Date(startA) < new Date(endB) && new Date(endA) > new Date(startB)
+}
 
 export default function HomePage() {
-  const [viagens, setViagens] = useState([])
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [searchDestino, setSearchDestino] = useState('')
   const { addToast } = useToast()
-  const navigate = useNavigate()
 
-  useEffect(() => {
-    carregarViagens()
-  }, [])
+  const loadListings = async (nextFilters = DEFAULT_FILTERS) => {
+    setLoading(true)
 
-  const carregarViagens = async () => {
     try {
-      setLoading(true)
-      const response = await api.getViagens()
-      setViagens(response.viagens || [])
+      if (nextFilters.checkin && nextFilters.checkout && nextFilters.checkin >= nextFilters.checkout) {
+        throw new Error('A data de check-out deve ser posterior ao check-in.')
+      }
+
+      let locais = await api.getLocais(nextFilters)
+
+      if (nextFilters.checkin && nextFilters.checkout) {
+        const ocupacoes = await Promise.all(
+          locais.map(async (local) => ({
+            localId: local.id || local._id,
+            periodos: await api.getOcupacao(local.id || local._id).catch(() => []),
+          }))
+        )
+
+        const mapaOcupacao = Object.fromEntries(
+          ocupacoes.map((item) => [item.localId, item.periodos])
+        )
+
+        locais = locais.filter((local) =>
+          !(mapaOcupacao[local.id || local._id] || []).some((periodo) =>
+            rangesOverlap(nextFilters.checkin, nextFilters.checkout, periodo.desde, periodo.ate)
+          )
+        )
+      }
+
+      setListings(locais)
     } catch (error) {
-      addToast('Erro ao carregar viagens: ' + error.message, 'error')
+      addToast(error.message || 'Erro ao carregar imóveis.', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  const buscarPorDestino = async () => {
-    if (!searchDestino.trim()) {
-      carregarViagens()
-      return
+  useEffect(() => {
+    let cancelled = false
+
+    async function bootstrap() {
+      setLoading(true)
+
+      try {
+        const locais = await api.getLocais(DEFAULT_FILTERS)
+        if (!cancelled) {
+          setListings(locais)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          addToast(error.message || 'Erro ao carregar imóveis.', 'error')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
 
-    try {
-      const response = await api.buscarViagensPorDestino(searchDestino)
-      setViagens(response.viagens || [])
-    } catch (error) {
-      addToast('Erro ao buscar: ' + error.message, 'error')
+    bootstrap()
+
+    return () => {
+      cancelled = true
     }
+  }, [addToast])
+
+  const handleFilterChange = (field, value) => {
+    setFilters((current) => ({ ...current, [field]: value }))
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Tem certeza que deseja deletar esta viagem?')) return
-
-    try {
-      await api.deleteViagem(id)
-      addToast('Viagem deletada com sucesso!', 'success')
-      carregarViagens()
-    } catch (error) {
-      addToast('Erro ao deletar: ' + error.message, 'error')
-    }
+  const handleSearch = async (event) => {
+    event.preventDefault()
+    await loadListings(filters)
   }
 
-  const formatarData = (data) => {
-    return new Date(data).toLocaleDateString('pt-BR')
+  const handleClear = async () => {
+    setFilters(DEFAULT_FILTERS)
+    await loadListings(DEFAULT_FILTERS)
+  }
+
+  if (loading && listings.length === 0) {
+    return <PageLoader />
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <ToastContainer />
-      <div className="max-w-7xl mx-auto">
-        {/* Busca e Filtros */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-2xl font-bold mb-4">🔍 Buscar Viagens</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchDestino}
-              onChange={(e) => setSearchDestino(e.target.value)}
-              placeholder="Digite o destino..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              onKeyPress={(e) => e.key === 'Enter' && buscarPorDestino()}
-            />
-            <button
-              onClick={buscarPorDestino}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              Buscar
-            </button>
-            <button
-              onClick={carregarViagens}
-              className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition"
-            >
-              Limpar
-            </button>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] bg-gradient-to-r from-rose-500 via-primary to-rose-600 px-6 py-10 text-white shadow-lg sm:px-10">
+        <div className="max-w-3xl">
+          <span className="inline-flex rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em]">
+            Busca inteligente
+          </span>
+          <h1 className="mt-5 text-3xl font-bold sm:text-5xl">Encontre o imóvel ideal para sua próxima hospedagem.</h1>
+          <p className="mt-4 text-sm leading-7 text-rose-50 sm:text-base">
+            Pesquise por cidade, preço máximo, avaliação e disponibilidade por datas para reservar com mais segurança.
+          </p>
+        </div>
+      </section>
+
+      <section className="-mt-8 relative z-10">
+        <SearchBar
+          filters={filters}
+          onChange={handleFilterChange}
+          onSubmit={handleSearch}
+          onClear={handleClear}
+          loading={loading}
+        />
+      </section>
+
+      <section className="mt-10">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Imóveis disponíveis</h2>
+            <p className="mt-1 text-sm text-gray-500">{listings.length} resultado{listings.length === 1 ? '' : 's'} encontrado{listings.length === 1 ? '' : 's'}.</p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-gray-500 shadow-sm">
+            <SlidersHorizontal size={16} className="text-primary" />
+            Busca por cidade, valor, avaliação e datas
           </div>
         </div>
 
-        {/* Lista de Viagens */}
-        <div className="grid gap-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Carregando viagens...</p>
-            </div>
-          ) : viagens.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg">
-              <p className="text-gray-600 mb-4">Nenhuma viagem encontrada</p>
-              <button
-                onClick={() => navigate('/novo-viagem')}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center gap-2"
-              >
-                <Plus size={20} />
-                Criar Primeira Viagem
-              </button>
-            </div>
-          ) : (
-            viagens.map(viagem => (
-              <div key={viagem.id} className="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-2">{viagem.destino}</h3>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <MapPin size={16} />
-                        <span>Tipo: {viagem.tipo?.descricao || 'N/A'}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar size={16} />
-                        <span>{formatarData(viagem.dataPartida)} a {formatarData(viagem.dataRetorno)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign size={16} />
-                        <span>R$ {viagem.preco?.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigate(`/viagem/${viagem.id}`)}
-                      className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
-                      title="Editar"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(viagem.id)}
-                      className="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition"
-                      title="Deletar"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-3">{viagem.descricao}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Vagas disponíveis: {viagem.vagas}</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    viagem.ativa ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {viagem.ativa ? '✓ Ativa' : '✕ Inativa'}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {loading ? (
+          <PageLoader />
+        ) : listings.length === 0 ? (
+          <div className="rounded-[2rem] border border-dashed border-gray-300 bg-white px-6 py-16 text-center shadow-sm">
+            <h3 className="text-xl font-semibold text-gray-900">Nenhum imóvel encontrado</h3>
+            <p className="mt-2 text-sm text-gray-500">Ajuste os filtros para encontrar outras hospedagens disponíveis.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

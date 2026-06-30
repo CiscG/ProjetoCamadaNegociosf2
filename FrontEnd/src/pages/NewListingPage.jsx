@@ -1,226 +1,169 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api/viagensApi'
+import { api } from '../api/client'
+import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import ToastContainer from '../components/ToastContainer'
 
-const TIPOS_VIAGEM = [
-  { value: 'NACIONAL', label: 'Viagem Nacional' },
-  { value: 'INTERNACIONAL', label: 'Viagem Internacional' },
-  { value: 'TURISMO_RELIGIOSO', label: 'Turismo Religioso' },
-  { value: 'TURISMO_AVENTURA', label: 'Turismo de Aventura' },
-  { value: 'TURISMO_PRAIA', label: 'Turismo de Praia' },
-  { value: 'TURISMO_CULTURAL', label: 'Turismo Cultural' },
-  { value: 'TURISMO_NEGOCIOS', label: 'Turismo de Negócios' },
-]
+const INITIAL_FORM = {
+  nome: '',
+  cidade: '',
+  estado: '',
+  pais: 'Brasil',
+  preco_por_noite: '',
+  descricao: '',
+  comodidades: '',
+}
 
-export default function NewViagemPage() {
-  const [form, setForm] = useState({
-    destino: '',
-    tipo: 'NACIONAL',
-    dataPartida: '',
-    dataRetorno: '',
-    preco: '',
-    vagas: '',
-    descricao: '',
-    ativa: true,
-  })
+export default function NewListingPage() {
+  const [form, setForm] = useState(INITIAL_FORM)
   const [loading, setLoading] = useState(false)
+  const { user, isHost } = useAuth()
   const { addToast } = useToast()
   const navigate = useNavigate()
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setForm(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }))
+  const handleChange = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+
+    if (!isHost) {
+      addToast('Apenas anfitriões podem cadastrar imóveis.', 'error')
+      return
+    }
+
     setLoading(true)
 
     try {
-      // Validações
-      if (!form.destino.trim()) throw new Error('Destino é obrigatório')
-      if (!form.dataPartida) throw new Error('Data de partida é obrigatória')
-      if (!form.dataRetorno) throw new Error('Data de retorno é obrigatória')
-      if (new Date(form.dataPartida) >= new Date(form.dataRetorno)) {
-        throw new Error('Data de partida deve ser anterior à data de retorno')
-      }
-      if (!form.preco || isNaN(form.preco)) throw new Error('Preço inválido')
-      if (!form.vagas || isNaN(form.vagas)) throw new Error('Vagas inválido')
-
-      const viagemData = {
-        destino: form.destino,
-        tipo: form.tipo,
-        dataPartida: form.dataPartida,
-        dataRetorno: form.dataRetorno,
-        preco: parseFloat(form.preco),
-        vagas: parseInt(form.vagas),
-        descricao: form.descricao,
-        ativa: form.ativa,
+      if (!form.nome.trim()) throw new Error('Informe o nome do imóvel.')
+      if (!form.cidade.trim()) throw new Error('Informe a cidade do imóvel.')
+      if (!form.estado.trim()) throw new Error('Informe o estado do imóvel.')
+      if (!form.preco_por_noite || Number(form.preco_por_noite) <= 0) {
+        throw new Error('Informe um preço por noite válido.')
       }
 
-      await api.createViagem(viagemData)
-      addToast('Viagem criada com sucesso!', 'success')
-      navigate('/')
+      await api.createLocal({
+        ...form,
+        anfitriao_id: user.id,
+        comodidades: form.comodidades
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
+      })
+
+      addToast('Imóvel cadastrado com sucesso!', 'success')
+      navigate('/dashboard')
     } catch (error) {
-      addToast(error.message || 'Erro ao criar viagem', 'error')
+      addToast(error.message || 'Erro ao cadastrar imóvel.', 'error')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pt-8">
-      <ToastContainer />
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
-        <h1 className="text-3xl font-bold mb-8">✈️ Criar Nova Viagem</h1>
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="mb-8 max-w-2xl">
+          <span className="inline-flex rounded-full bg-rose-50 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+            Área do anfitrião
+          </span>
+          <h1 className="mt-4 text-3xl font-bold text-gray-900">Cadastrar novo imóvel</h1>
+          <p className="mt-2 text-sm leading-7 text-gray-500">
+            Publique uma hospedagem com cidade, descrição, preço e comodidades para que novos hóspedes possam reservar.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Destino *
-              </label>
-              <input
-                type="text"
-                name="destino"
-                value={form.destino}
-                onChange={handleChange}
-                placeholder="Ex: Rio de Janeiro"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Viagem *
-              </label>
-              <select
-                name="tipo"
-                value={form.tipo}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                {TIPOS_VIAGEM.map(tipo => (
-                  <option key={tipo.value} value={tipo.value}>
-                    {tipo.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data de Partida *
-              </label>
-              <input
-                type="date"
-                name="dataPartida"
-                value={form.dataPartida}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data de Retorno *
-              </label>
-              <input
-                type="date"
-                name="dataRetorno"
-                value={form.dataRetorno}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Preço (R$) *
-              </label>
-              <input
-                type="number"
-                name="preco"
-                value={form.preco}
-                onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vagas Disponíveis *
-              </label>
-              <input
-                type="number"
-                name="vagas"
-                value={form.vagas}
-                onChange={handleChange}
-                placeholder="0"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                required
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">Nome do imóvel</label>
+            <input
+              type="text"
+              value={form.nome}
+              onChange={(event) => handleChange('nome', event.target.value)}
+              placeholder="Ex.: Studio Moderno com varanda"
+              className="input-field"
+              required
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descrição
-            </label>
-            <textarea
-              name="descricao"
-              value={form.descricao}
-              onChange={handleChange}
-              placeholder="Descreva a viagem..."
-              rows="4"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-
-          <div className="flex items-center">
+            <label className="mb-2 block text-sm font-medium text-gray-700">Cidade</label>
             <input
-              type="checkbox"
-              name="ativa"
-              checked={form.ativa}
-              onChange={handleChange}
-              className="w-4 h-4 text-blue-600 rounded"
+              type="text"
+              value={form.cidade}
+              onChange={(event) => handleChange('cidade', event.target.value)}
+              placeholder="Rio de Janeiro"
+              className="input-field"
+              required
             />
-            <label className="ml-2 text-sm font-medium text-gray-700">
-              Viagem Ativa
-            </label>
           </div>
 
-          <div className="flex gap-4 pt-6">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-            >
-              {loading ? 'Salvando...' : 'Criar Viagem'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-medium hover:bg-gray-400 transition"
-            >
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Estado</label>
+            <input
+              type="text"
+              value={form.estado}
+              onChange={(event) => handleChange('estado', event.target.value)}
+              placeholder="RJ"
+              className="input-field"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">País</label>
+            <input
+              type="text"
+              value={form.pais}
+              onChange={(event) => handleChange('pais', event.target.value)}
+              className="input-field"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Preço por noite (R$)</label>
+            <input
+              type="number"
+              min="1"
+              step="0.01"
+              value={form.preco_por_noite}
+              onChange={(event) => handleChange('preco_por_noite', event.target.value)}
+              placeholder="250"
+              className="input-field"
+              required
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">Descrição</label>
+            <textarea
+              value={form.descricao}
+              onChange={(event) => handleChange('descricao', event.target.value)}
+              rows="5"
+              placeholder="Descreva o espaço, os diferenciais e a região."
+              className="input-field"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">Comodidades</label>
+            <input
+              type="text"
+              value={form.comodidades}
+              onChange={(event) => handleChange('comodidades', event.target.value)}
+              placeholder="Wi-Fi, Piscina, Ar Condicionado"
+              className="input-field"
+            />
+            <p className="mt-2 text-xs text-gray-500">Separe cada comodidade por vírgula.</p>
+          </div>
+
+          <div className="md:col-span-2 flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => navigate('/dashboard')} className="btn-ghost justify-center">
               Cancelar
+            </button>
+            <button type="submit" disabled={loading} className="btn-primary justify-center">
+              {loading ? 'Salvando...' : 'Publicar imóvel'}
             </button>
           </div>
         </form>
