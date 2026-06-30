@@ -31,14 +31,14 @@ function normalizeLocal(l) {
 function normalizeReserva(r) {
   return {
     _id: r.id || r._id,
-    local_id: r.local_id,
+    propriedade_id: r.propriedade_id,
     hospede_id: r.hospede_id,
     desde: r.checkin || r.desde,
     ate: r.checkout || r.ate,
     preco_total: r.valor_total ?? r.preco_total,
     status: r.status,
-    local_nome: r.local?.titulo || r.local_nome,
-    local_cidade: r.local?.endereco?.cidade || r.local_cidade,
+    local_nome: r.propriedade?.titulo || r.local_nome,
+    local_cidade: r.propriedade?.endereco?.cidade || r.local_cidade,
   }
 }
 
@@ -50,12 +50,12 @@ export const api = {
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v != null))
     ).toString()
-    const data = await request(`/locais${qs ? `?${qs}` : ''}`)
+    const data = await request(`/propriedades${qs ? `?${qs}` : ''}`)
     return Array.isArray(data) ? data.map(normalizeLocal) : []
   },
 
   createLocal: (data) =>
-    request('/locais', {
+    request('/propriedades', {
       method: 'POST',
       body: JSON.stringify({
         anfitriao_id: data.anfitriao_id,
@@ -79,12 +79,12 @@ export const api = {
     request('/reservas', {
       method: 'POST',
       body: JSON.stringify({
-        local_id: data.local_id,
+        propriedade_id: data.local_id || data.propriedade_id,
         hospede_id: data.hospede_id,
         checkin: data.desde || data.checkin,
         checkout: data.ate || data.checkout,
       }),
     }),
 
-  getOcupacao: (id) => request(`/locais/${id}/ocupacao`),
+  getOcupacao: (id) => request(`/propriedades/${id}/ocupacao`),
 }

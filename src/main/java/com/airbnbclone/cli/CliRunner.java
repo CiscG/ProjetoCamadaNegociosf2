@@ -1,14 +1,14 @@
 package com.airbnbclone.cli;
 
-import com.airbnbclone.dto.LocalRequest;
-import com.airbnbclone.dto.LocalResponse;
 import com.airbnbclone.dto.OcupacaoResponse;
+import com.airbnbclone.dto.PropriedadeRequest;
+import com.airbnbclone.dto.PropriedadeResponse;
 import com.airbnbclone.dto.ReservaRequest;
 import com.airbnbclone.dto.ReservaResponse;
 import com.airbnbclone.model.Endereco;
 import com.airbnbclone.model.Usuario;
 import com.airbnbclone.service.ConflictException;
-import com.airbnbclone.service.LocalService;
+import com.airbnbclone.service.PropriedadeService;
 import com.airbnbclone.service.ReservaService;
 import com.airbnbclone.service.UsuarioService;
 import org.springframework.stereotype.Component;
@@ -21,14 +21,15 @@ import java.util.Scanner;
 public class CliRunner {
 
     private final UsuarioService usuarioService;
-    private final LocalService localService;
+    private final PropriedadeService propriedadeService;
     private final ReservaService reservaService;
     private final Scanner scanner = new Scanner(System.in);
     private Usuario usuarioLogado;
 
-    public CliRunner(UsuarioService usuarioService, LocalService localService, ReservaService reservaService) {
+    public CliRunner(UsuarioService usuarioService, PropriedadeService propriedadeService,
+                     ReservaService reservaService) {
         this.usuarioService = usuarioService;
-        this.localService = localService;
+        this.propriedadeService = propriedadeService;
         this.reservaService = reservaService;
     }
 
@@ -41,10 +42,10 @@ public class CliRunner {
             System.out.println();
             switch (opcao) {
                 case "1" -> login();
-                case "2" -> listarImoveis();
+                case "2" -> listarPropriedades();
                 case "3" -> buscarPorCidade();
                 case "4" -> verOcupacao();
-                case "5" -> cadastrarImovel();
+                case "5" -> cadastrarPropriedade();
                 case "6" -> fazerReserva();
                 case "7" -> minhasReservas();
                 case "8" -> minhasPropriedades();
@@ -69,10 +70,10 @@ public class CliRunner {
                 : "Nao logado";
         println("\n─── Usuario: " + usuario + " ───");
         println("1. Login");
-        println("2. Listar todos os imoveis");
-        println("3. Buscar imoveis por cidade");
-        println("4. Ver ocupacao de um imovel");
-        if (isAnfitriao()) println("5. Cadastrar imovel");
+        println("2. Listar todas as propriedades");
+        println("3. Buscar propriedades por cidade");
+        println("4. Ver ocupacao de uma propriedade");
+        if (isAnfitriao()) println("5. Cadastrar propriedade");
         if (isHospede())   println("6. Fazer reserva");
         println("7. Minhas reservas");
         if (isAnfitriao()) println("8. Minhas propriedades");
@@ -104,11 +105,11 @@ public class CliRunner {
         usuarioLogado = null;
     }
 
-    private void listarImoveis() {
-        List<LocalResponse> locais = localService.listar(null, null, null);
-        if (locais.isEmpty()) { println("Nenhum imovel cadastrado."); return; }
-        println("=== Imoveis disponíveis (" + locais.size() + ") ===");
-        locais.forEach(this::imprimirLocal);
+    private void listarPropriedades() {
+        List<PropriedadeResponse> propriedades = propriedadeService.listar(null, null, null);
+        if (propriedades.isEmpty()) { println("Nenhuma propriedade cadastrada."); return; }
+        println("=== Propriedades disponíveis (" + propriedades.size() + ") ===");
+        propriedades.forEach(this::imprimirPropriedade);
     }
 
     private void buscarPorCidade() {
@@ -117,22 +118,23 @@ public class CliRunner {
         print("Preco maximo por noite (Enter para ignorar): ");
         String preco = scanner.nextLine().trim();
 
-        List<LocalResponse> locais = localService.listar(cidade, preco.isEmpty() ? null : preco, null);
-        if (locais.isEmpty()) { println("Nenhum imovel encontrado."); return; }
-        println("=== Resultados em " + cidade + " (" + locais.size() + ") ===");
-        locais.forEach(this::imprimirLocal);
+        List<PropriedadeResponse> propriedades = propriedadeService.listar(
+                cidade, preco.isEmpty() ? null : preco, null);
+        if (propriedades.isEmpty()) { println("Nenhuma propriedade encontrada."); return; }
+        println("=== Resultados em " + cidade + " (" + propriedades.size() + ") ===");
+        propriedades.forEach(this::imprimirPropriedade);
     }
 
     private void verOcupacao() {
-        print("ID do imovel: ");
+        print("ID da propriedade: ");
         String id = scanner.nextLine().trim();
         List<OcupacaoResponse> ocupacao = reservaService.ocupacao(id);
-        if (ocupacao.isEmpty()) { println("Nenhuma reserva confirmada para este imovel."); return; }
+        if (ocupacao.isEmpty()) { println("Nenhuma reserva confirmada para esta propriedade."); return; }
         println("=== Datas ocupadas ===");
         ocupacao.forEach(o -> println("  De " + o.desde() + " ate " + o.ate()));
     }
 
-    private void cadastrarImovel() {
+    private void cadastrarPropriedade() {
         if (!isAnfitriao()) { println("Acesso negado. Faca login como anfitriao."); return; }
 
         print("Titulo: ");
@@ -156,13 +158,13 @@ public class CliRunner {
         List<String> comodidades = comodidadesStr.isBlank() ? List.of()
                 : List.of(comodidadesStr.split(","));
 
-        LocalRequest req = new LocalRequest(
+        PropriedadeRequest req = new PropriedadeRequest(
                 usuarioLogado.getId(), titulo, descricao, preco,
                 new Endereco(cidade, estado, pais), comodidades);
 
         try {
-            LocalResponse local = localService.criar(req);
-            println("Imovel cadastrado com sucesso! ID: " + local.id());
+            PropriedadeResponse propriedade = propriedadeService.criar(req);
+            println("Propriedade cadastrada com sucesso! ID: " + propriedade.id());
         } catch (IllegalArgumentException e) {
             println("Erro: " + e.getMessage());
         }
@@ -171,14 +173,14 @@ public class CliRunner {
     private void fazerReserva() {
         if (!isHospede()) { println("Acesso negado. Faca login como hospede."); return; }
 
-        List<LocalResponse> locais = localService.listar(null, null, null);
-        if (locais.isEmpty()) { println("Nenhum imovel disponivel."); return; }
+        List<PropriedadeResponse> propriedades = propriedadeService.listar(null, null, null);
+        if (propriedades.isEmpty()) { println("Nenhuma propriedade disponivel."); return; }
 
-        println("=== Imoveis disponíveis ===");
-        locais.forEach(this::imprimirLocal);
+        println("=== Propriedades disponíveis ===");
+        propriedades.forEach(this::imprimirPropriedade);
 
-        print("ID do imovel: ");
-        String localId = scanner.nextLine().trim();
+        print("ID da propriedade: ");
+        String propriedadeId = scanner.nextLine().trim();
         print("Data de checkin (YYYY-MM-DD): ");
         String checkin = scanner.nextLine().trim();
         print("Data de checkout (YYYY-MM-DD): ");
@@ -186,9 +188,10 @@ public class CliRunner {
 
         try {
             ReservaResponse reserva = reservaService.criar(
-                    new ReservaRequest(localId, usuarioLogado.getId(), checkin, checkout));
+                    new ReservaRequest(propriedadeId, usuarioLogado.getId(), checkin, checkout));
             println("Reserva confirmada! ID: " + reserva.id());
-            println("  Local: " + (reserva.local() != null ? reserva.local().titulo() : localId));
+            println("  Propriedade: " + (reserva.propriedade() != null
+                    ? reserva.propriedade().titulo() : propriedadeId));
             println("  Checkin: " + reserva.checkin() + "  Checkout: " + reserva.checkout());
             println("  Valor total: R$ " + String.format("%.2f", reserva.valorTotal()));
         } catch (ConflictException e) {
@@ -201,16 +204,15 @@ public class CliRunner {
     private void minhasReservas() {
         if (usuarioLogado == null) { println("Faca login primeiro."); return; }
 
-        boolean isHospede = isHospede();
-        boolean isAnfitriao = isAnfitriao();
+        boolean hospede = isHospede();
+        boolean anfitriao = isAnfitriao();
 
         List<ReservaResponse> reservas;
-        if (isHospede && !isAnfitriao) {
+        if (hospede && !anfitriao) {
             reservas = reservaService.listar(usuarioLogado.getId(), null, null);
-        } else if (isAnfitriao && !isHospede) {
+        } else if (anfitriao && !hospede) {
             reservas = reservaService.listar(null, usuarioLogado.getId(), null);
         } else {
-            // ambos: show both
             println("1. Como hospede  2. Como anfitriao");
             print("Escolha: ");
             String op = scanner.nextLine().trim();
@@ -227,34 +229,36 @@ public class CliRunner {
 
     private void minhasPropriedades() {
         if (!isAnfitriao()) { println("Acesso negado. Faca login como anfitriao."); return; }
-        List<LocalResponse> locais = localService.listar(null, null, usuarioLogado.getId());
-        if (locais.isEmpty()) { println("Voce nao tem imoveis cadastrados."); return; }
-        println("=== Seus imoveis (" + locais.size() + ") ===");
-        locais.forEach(this::imprimirLocal);
+        List<PropriedadeResponse> propriedades = propriedadeService.listar(null, null, usuarioLogado.getId());
+        if (propriedades.isEmpty()) { println("Voce nao tem propriedades cadastradas."); return; }
+        println("=== Suas propriedades (" + propriedades.size() + ") ===");
+        propriedades.forEach(this::imprimirPropriedade);
     }
 
     // ──────────────── HELPERS ────────────────
 
-    private void imprimirLocal(LocalResponse l) {
+    private void imprimirPropriedade(PropriedadeResponse p) {
         println("──────────────────────────────");
-        println("ID    : " + l.id());
-        println("Titulo: " + l.titulo());
-        println("Local : " + l.endereco().getCidade() + " - " + l.endereco().getEstado() + ", " + l.endereco().getPais());
-        println("Preco : R$ " + String.format("%.2f", l.precoPorNoite()) + "/noite");
-        println("Anfitrio: " + l.anfitriaoNome());
-        if (l.comodidades() != null && !l.comodidades().isEmpty())
-            println("Comodidades: " + String.join(", ", l.comodidades()));
-        println("Descricao: " + l.descricao());
+        println("ID    : " + p.id());
+        println("Titulo: " + p.titulo());
+        println("Local : " + p.endereco().getCidade() + " - " + p.endereco().getEstado()
+                + ", " + p.endereco().getPais());
+        println("Preco : R$ " + String.format("%.2f", p.precoPorNoite()) + "/noite");
+        println("Anfitriao: " + p.anfitriaoNome());
+        if (p.comodidades() != null && !p.comodidades().isEmpty())
+            println("Comodidades: " + String.join(", ", p.comodidades()));
+        println("Descricao: " + p.descricao());
     }
 
     private void imprimirReserva(ReservaResponse r) {
         println("──────────────────────────────");
-        println("ID       : " + r.id());
-        String tituloLocal = r.local() != null ? r.local().titulo() : r.localId();
-        println("Imovel   : " + tituloLocal);
-        println("Checkin  : " + r.checkin() + "  Checkout: " + r.checkout());
-        println("Valor    : R$ " + String.format("%.2f", r.valorTotal()));
-        println("Status   : " + r.status());
+        println("ID         : " + r.id());
+        String tituloPropriedade = r.propriedade() != null
+                ? r.propriedade().titulo() : r.propriedadeId();
+        println("Propriedade: " + tituloPropriedade);
+        println("Checkin    : " + r.checkin() + "  Checkout: " + r.checkout());
+        println("Valor      : R$ " + String.format("%.2f", r.valorTotal()));
+        println("Status     : " + r.status());
     }
 
     private boolean isAnfitriao() {

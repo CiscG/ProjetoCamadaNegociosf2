@@ -2,10 +2,10 @@ package com.airbnbclone.seed;
 
 import com.airbnbclone.model.Datas;
 import com.airbnbclone.model.Endereco;
-import com.airbnbclone.model.Local;
+import com.airbnbclone.model.Propriedade;
 import com.airbnbclone.model.Reserva;
 import com.airbnbclone.model.Usuario;
-import com.airbnbclone.repository.LocalRepository;
+import com.airbnbclone.repository.PropriedadeRepository;
 import com.airbnbclone.repository.ReservaRepository;
 import com.airbnbclone.repository.UsuarioRepository;
 import org.slf4j.Logger;
@@ -27,14 +27,14 @@ public class SeedDataLoader implements ApplicationRunner {
     private static final String DEMO_PASSWORD = "123456";
 
     private final UsuarioRepository usuarioRepo;
-    private final LocalRepository localRepo;
+    private final PropriedadeRepository propriedadeRepo;
     private final ReservaRepository reservaRepo;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public SeedDataLoader(UsuarioRepository usuarioRepo, LocalRepository localRepo,
+    public SeedDataLoader(UsuarioRepository usuarioRepo, PropriedadeRepository propriedadeRepo,
                           ReservaRepository reservaRepo) {
         this.usuarioRepo = usuarioRepo;
-        this.localRepo = localRepo;
+        this.propriedadeRepo = propriedadeRepo;
         this.reservaRepo = reservaRepo;
     }
 
@@ -66,27 +66,27 @@ public class SeedDataLoader implements ApplicationRunner {
             }
         }
 
-        // Seed locais (only if collection is empty)
-        if (localRepo.count() == 0) {
-            Local l1 = local("75ef00000000000000000001", "65df00000000000000000001",
+        // Seed propriedades (only if collection is empty)
+        if (propriedadeRepo.count() == 0) {
+            Propriedade p1 = propriedade("75ef00000000000000000001", "65df00000000000000000001",
                     "Studio Moderno - Copacabana", "A 2 minutos da praia com Wi-Fi de alta velocidade.",
                     220.0, new Endereco("Rio de Janeiro", "RJ", "Brasil"),
                     List.of("Wi-Fi", "Ar Condicionado", "Elevador"),
                     LocalDateTime.of(2026, 3, 12, 0, 0));
 
-            Local l2 = local("75ef00000000000000000002", "65df00000000000000000001",
+            Propriedade p2 = propriedade("75ef00000000000000000002", "65df00000000000000000001",
                     "Casa de Campo com Lareira", "Ideal para fins de semana relaxantes na serra.",
                     450.0, new Endereco("Petropolis", "RJ", "Brasil"),
                     List.of("Piscina", "Lareira", "Churrasqueira"),
                     LocalDateTime.of(2026, 3, 20, 0, 0));
 
-            Local l3 = local("75ef00000000000000000003", "65df00000000000000000003",
+            Propriedade p3 = propriedade("75ef00000000000000000003", "65df00000000000000000003",
                     "Loft Minimalista - Vila Madalena", "Perto de bares, galerias de arte e metro.",
                     310.0, new Endereco("Sao Paulo", "SP", "Brasil"),
                     List.of("Wi-Fi", "Academia", "Varanda"),
                     LocalDateTime.of(2026, 4, 2, 0, 0));
 
-            localRepo.saveAll(List.of(l1, l2, l3));
+            propriedadeRepo.saveAll(List.of(p1, p2, p3));
         }
 
         // Seed reservas (only if collection is empty)
@@ -107,26 +107,27 @@ public class SeedDataLoader implements ApplicationRunner {
         log.info("Dados de demonstracao prontos. Usuarios: carlos@email.com / maria@email.com / ana@email.com | Senha: {}", DEMO_PASSWORD);
     }
 
-    private Local local(String id, String anfitriaoId, String titulo, String descricao,
-                        Double preco, Endereco endereco, List<String> comodidades, LocalDateTime data) {
-        Local l = new Local();
-        l.setId(id);
-        l.setAnfitriaoId(anfitriaoId);
-        l.setTitulo(titulo);
-        l.setDescricao(descricao);
-        l.setPrecoPorNoite(preco);
-        l.setEndereco(endereco);
-        l.setComodidades(comodidades);
-        l.setDataCadastro(data);
-        return l;
+    private Propriedade propriedade(String id, String anfitriaoId, String titulo, String descricao,
+                                    Double preco, Endereco endereco, List<String> comodidades,
+                                    LocalDateTime data) {
+        Propriedade p = new Propriedade();
+        p.setId(id);
+        p.setAnfitriaoId(anfitriaoId);
+        p.setTitulo(titulo);
+        p.setDescricao(descricao);
+        p.setPrecoPorNoite(preco);
+        p.setEndereco(endereco);
+        p.setComodidades(comodidades);
+        p.setDataCadastro(data);
+        return p;
     }
 
-    private Reserva reserva(String id, String localId, String hospedeId,
-                            LocalDate checkin, LocalDate checkout,
-                            Double valor, String status, LocalDateTime dataReserva) {
+    private Reserva reserva(String id, String propriedadeId, String hospedeId,
+                             LocalDate checkin, LocalDate checkout,
+                             Double valor, String status, LocalDateTime dataReserva) {
         Reserva r = new Reserva();
         r.setId(id);
-        r.setLocalId(localId);
+        r.setPropriedadeId(propriedadeId);
         r.setHospedeId(hospedeId);
         r.setDatas(new Datas(checkin, checkout));
         r.setValorTotal(valor);
