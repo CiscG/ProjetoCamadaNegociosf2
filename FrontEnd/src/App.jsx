@@ -2,16 +2,15 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import Header from './components/Header'
+import ToastContainer from './components/ToastContainer'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
-import PropertyPage from './pages/PropertyPage'
-import DashboardPage from './pages/DashboardPage'
 import NewListingPage from './pages/NewListingPage'
+import DashboardPage from './pages/DashboardPage'
 
-function ProtectedRoute({ children, hostOnly = false }) {
-  const { user, isHost } = useAuth()
+function ProtectedRoute({ children }) {
+  const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  if (hostOnly && !isHost) return <Navigate to="/" replace />
   return children
 }
 
@@ -21,12 +20,12 @@ function AppRoutes() {
   return (
     <>
       {user && <Header />}
+      <ToastContainer />
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/imovel/:id" element={<ProtectedRoute><PropertyPage /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/novo-imovel" element={<ProtectedRoute hostOnly><NewListingPage /></ProtectedRoute>} />
+        <Route path="/novo-viagem" element={<ProtectedRoute><NewListingPage /></ProtectedRoute>} />
+        <Route path="/clientes" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

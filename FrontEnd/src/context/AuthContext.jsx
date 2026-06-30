@@ -1,45 +1,34 @@
-import { createContext, useContext, useState, useCallback } from 'react'
-import { api } from '../api/client'
+import React, { createContext, useContext, useState } from 'react'
 
-const AuthContext = createContext(null)
-
-const STORAGE_KEY = 'alugafacil-user'
+const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      return stored ? JSON.parse(stored) : null
-    } catch {
-      return null
-    }
+    const saved = localStorage.getItem('user')
+    return saved ? JSON.parse(saved) : null
   })
 
-  const login = useCallback(async (email, senha) => {
-    const data = await api.login(email, senha)
-    const u = data.usuario
-    setUser(u)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(u))
-    return u
-  }, [])
+  const login = (userData) => {
+    setUser(userData)
+    localStorage.setItem('user', JSON.stringify(userData))
+  }
 
-  const logout = useCallback(() => {
+  const logout = () => {
     setUser(null)
-    localStorage.removeItem(STORAGE_KEY)
-  }, [])
-
-  const isHost = user?.tipo === 'anfitriao' || user?.tipo === 'ambos'
-  const isGuest = user?.tipo === 'hospede' || user?.tipo === 'ambos'
+    localStorage.removeItem('user')
+  }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isHost, isGuest }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
-  return ctx
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de AuthProvider')
+  }
+  return context
 }
