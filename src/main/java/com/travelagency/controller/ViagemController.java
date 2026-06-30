@@ -102,10 +102,6 @@ public class ViagemController {
             logger.error("Datas inválidas: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("status", "erro", "mensagem", e.getMessage()));
-        } catch (ViagemNotFoundException e) {
-            logger.error("Erro ao criar viagem: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("status", "erro", "mensagem", e.getMessage()));
         } catch (Exception e) {
             logger.error("Erro ao criar viagem: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
