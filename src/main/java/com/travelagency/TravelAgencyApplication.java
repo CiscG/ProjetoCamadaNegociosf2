@@ -58,8 +58,6 @@ public class TravelAgencyApplication {
             ║  • DELETE /api/clientes/{id}           - Deletar cliente                  ║
             ║  • GET    /api/clientes/{id}/export/xml - Exportar cliente em XML         ║
             ║                                                                              ║
-            ║  Documentação: http://localhost:8080/swagger-ui.html                       ║
-            ║                                                                              ║
             ╚══════════════════════════════════════════════════════════════════════════════╝
             """);
     }

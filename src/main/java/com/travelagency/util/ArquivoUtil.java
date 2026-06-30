@@ -21,13 +21,10 @@ public class ArquivoUtil {
     private static final LoggerUtil logger = new LoggerUtil();
     
     static {
-        // Cria diretório se não existir
+        // Cria diretório se não existir (createDirectories é idempotente e thread-safe)
         try {
-            Path path = Paths.get(DIRETORIO_RELATORIOS);
-            if (!Files.exists(path)) {
-                Files.createDirectory(path);
-                logger.info("Diretório de relatórios criado: " + DIRETORIO_RELATORIOS);
-            }
+            Files.createDirectories(Paths.get(DIRETORIO_RELATORIOS));
+            logger.info("Diretório de relatórios: " + DIRETORIO_RELATORIOS);
         } catch (IOException e) {
             logger.error("Erro ao criar diretório: " + e.getMessage());
         }
