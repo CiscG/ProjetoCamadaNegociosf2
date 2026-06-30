@@ -69,7 +69,7 @@ public class ViagemService {
      * Salva nova viagem com validação de datas
      * Requisito: Criação e Lançamento de exceções
      */
-    public Viagem salvarViagem(Viagem viagem) throws DatasInvalidasException {
+    public Viagem salvarViagem(Viagem viagem) throws DatasInvalidasException, ViagemNotFoundException {
         try {
             if (viagem == null) {
                 throw new ViagemNotFoundException("Viagem não pode ser nula");
@@ -132,7 +132,7 @@ public class ViagemService {
     /**
      * Busca viagens por destino
      */
-    public List<Viagem> buscarPorDestino(String destino) {
+    public List<Viagem> buscarPorDestino(String destino) throws ViagemNotFoundException {
         try {
             if (destino == null || destino.isEmpty()) {
                 throw new ViagemNotFoundException("Destino não pode ser vazio");
@@ -182,7 +182,7 @@ public class ViagemService {
     /**
      * Deleta viagem
      */
-    public void deletarViagem(String id) {
+    public void deletarViagem(String id) throws ViagemNotFoundException {
         try {
             if (id == null || id.isEmpty()) {
                 throw new ViagemNotFoundException("ID da viagem não pode ser vazio");
