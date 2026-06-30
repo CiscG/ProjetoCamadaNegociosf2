@@ -1,7 +1,7 @@
 package com.airbnbclone.dto;
 
 public record ReservaRequest(
-        String localId,
+        String propriedadeId,
         String hospedeId,
         String checkin,
         String checkout
