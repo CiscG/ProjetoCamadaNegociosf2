@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertCircle, ArrowLeft, MapPin, Wifi, Wind, Car, Waves } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
@@ -35,30 +35,42 @@ export default function PropertyPage() {
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(false)
 
-  const loadProperty = useCallback(async () => {
-    setLoading(true)
+  useEffect(() => {
+    let cancelled = false
 
-    try {
-      const [locais, ocupacao] = await Promise.all([api.getLocais(), api.getOcupacao(id)])
-      const selected = locais.find((local) => local.id === id)
+    async function bootstrap() {
+      setLoading(true)
 
-      if (!selected) {
-        throw new Error('Imóvel não encontrado.')
+      try {
+        const [locais, ocupacao] = await Promise.all([api.getLocais(), api.getOcupacao(id)])
+        const selected = locais.find((local) => local.id === id)
+
+        if (!selected) {
+          throw new Error('Imóvel não encontrado.')
+        }
+
+        if (!cancelled) {
+          setProperty(selected)
+          setOccupiedDates(ocupacao)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          addToast(error.message || 'Erro ao carregar imóvel.', 'error')
+          navigate('/')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
+    }
 
-      setProperty(selected)
-      setOccupiedDates(ocupacao)
-    } catch (error) {
-      addToast(error.message || 'Erro ao carregar imóvel.', 'error')
-      navigate('/')
-    } finally {
-      setLoading(false)
+    bootstrap()
+
+    return () => {
+      cancelled = true
     }
   }, [addToast, id, navigate])
-
-  useEffect(() => {
-    loadProperty()
-  }, [loadProperty])
 
   const handleReserve = async ({ desde, ate, noites }) => {
     if (!desde || !ate) {

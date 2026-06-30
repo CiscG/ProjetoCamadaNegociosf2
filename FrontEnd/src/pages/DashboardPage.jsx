@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CalendarRange, Home, LayoutDashboard, UserRound } from 'lucide-react'
 import { api } from '../api/client'
 import ReservationCard from '../components/ReservationCard'
@@ -30,32 +30,44 @@ export default function DashboardPage() {
   const [imoveis, setImoveis] = useState([])
   const [ocupacoes, setOcupacoes] = useState({})
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true)
-
-    try {
-      const [guestReservations, hostListings] = await Promise.all([
-        isGuest ? api.getReservas({ hospede_id: user.id }) : Promise.resolve([]),
-        isHost ? api.getLocais({ anfitriao_id: user.id }) : Promise.resolve([]),
-      ])
-
-      const occupancyEntries = await Promise.all(
-        hostListings.map(async (listing) => [listing.id, await api.getOcupacao(listing.id).catch(() => [])])
-      )
-
-      setReservas(guestReservations)
-      setImoveis(hostListings)
-      setOcupacoes(Object.fromEntries(occupancyEntries))
-    } catch (error) {
-      addToast(error.message || 'Erro ao carregar dashboard.', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [addToast, isGuest, isHost, user?.id])
-
   useEffect(() => {
-    loadDashboard()
-  }, [loadDashboard])
+    let cancelled = false
+
+    async function bootstrap() {
+      setLoading(true)
+
+      try {
+        const [guestReservations, hostListings] = await Promise.all([
+          isGuest ? api.getReservas({ hospede_id: user.id }) : Promise.resolve([]),
+          isHost ? api.getLocais({ anfitriao_id: user.id }) : Promise.resolve([]),
+        ])
+
+        const occupancyEntries = await Promise.all(
+          hostListings.map(async (listing) => [listing.id, await api.getOcupacao(listing.id).catch(() => [])])
+        )
+
+        if (!cancelled) {
+          setReservas(guestReservations)
+          setImoveis(hostListings)
+          setOcupacoes(Object.fromEntries(occupancyEntries))
+        }
+      } catch (error) {
+        if (!cancelled) {
+          addToast(error.message || 'Erro ao carregar dashboard.', 'error')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    bootstrap()
+
+    return () => {
+      cancelled = true
+    }
+  }, [addToast, isGuest, isHost, user.id])
 
   if (loading) {
     return <PageLoader />
