@@ -8,12 +8,18 @@ const RATING_BY_ID = {
 
 async function parseResponse(res) {
   const text = await res.text()
+  const contentType = res.headers.get('content-type') || ''
 
   if (!text) return null
 
   try {
     return JSON.parse(text)
-  } catch {
+  } catch (error) {
+    if (contentType.includes('application/json')) {
+      const parseError = new Error('Resposta JSON invalida recebida da API.')
+      parseError.cause = error
+      throw parseError
+    }
     return text
   }
 }
@@ -73,6 +79,7 @@ function normalizeLocal(local) {
 
   return {
     id,
+    _id: id,
     nome: local.titulo || local.nome,
     cidade: endereco.cidade || local.cidade || '',
     estado: endereco.estado || local.estado || '',
@@ -92,6 +99,7 @@ function normalizeReserva(reserva) {
 
   return {
     id: reserva.id || reserva._id,
+    _id: reserva.id || reserva._id,
     propriedade_id: reserva.propriedadeId || reserva.propriedade_id,
     hospede_id: reserva.hospedeId || reserva.hospede_id,
     desde: reserva.checkin || reserva.desde,
