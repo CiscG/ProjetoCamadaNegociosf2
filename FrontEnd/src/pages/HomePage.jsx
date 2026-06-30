@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
 import { api } from '../api/client'
 import ListingCard from '../components/ListingCard'
@@ -24,7 +24,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const { addToast } = useToast()
 
-  const loadListings = useCallback(async (nextFilters = DEFAULT_FILTERS) => {
+  const loadListings = async (nextFilters = DEFAULT_FILTERS) => {
     setLoading(true)
 
     try {
@@ -59,11 +59,36 @@ export default function HomePage() {
     } finally {
       setLoading(false)
     }
-  }, [addToast])
+  }
 
   useEffect(() => {
-    loadListings(DEFAULT_FILTERS)
-  }, [loadListings])
+    let cancelled = false
+
+    async function bootstrap() {
+      setLoading(true)
+
+      try {
+        const locais = await api.getLocais(DEFAULT_FILTERS)
+        if (!cancelled) {
+          setListings(locais)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          addToast(error.message || 'Erro ao carregar imóveis.', 'error')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    bootstrap()
+
+    return () => {
+      cancelled = true
+    }
+  }, [addToast])
 
   const handleFilterChange = (field, value) => {
     setFilters((current) => ({ ...current, [field]: value }))

@@ -8,8 +8,9 @@ const ROLE_LABELS = {
   ambos: 'Anfitrião e hóspede',
 }
 
-function NavLink({ to, icon: Icon, children, hidden = false }) {
+function NavLink({ to, icon, children, hidden = false }) {
   const location = useLocation()
+  const IconComponent = icon
 
   if (hidden) return null
 
@@ -23,7 +24,7 @@ function NavLink({ to, icon: Icon, children, hidden = false }) {
         active ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-primary',
       ].join(' ')}
     >
-      <Icon size={16} />
+      <IconComponent size={16} />
       {children}
     </Link>
   )

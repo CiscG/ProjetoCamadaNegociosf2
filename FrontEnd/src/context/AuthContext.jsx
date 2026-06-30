@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { api } from '../api/client'
 
 const STORAGE_KEY = 'airbnbCloneUser'
@@ -33,19 +33,14 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const value = useMemo(() => {
-    const tipo = user?.tipo?.toLowerCase?.() || ''
-    const isGuest = tipo === 'hospede' || tipo === 'ambos'
-    const isHost = tipo === 'anfitriao' || tipo === 'ambos'
-
-    return {
-      user,
-      login,
-      logout,
-      isGuest,
-      isHost,
-    }
-  }, [user])
+  const tipo = user?.tipo?.toLowerCase?.() || ''
+  const value = {
+    user,
+    login,
+    logout,
+    isGuest: tipo === 'hospede' || tipo === 'ambos',
+    isHost: tipo === 'anfitriao' || tipo === 'ambos',
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
