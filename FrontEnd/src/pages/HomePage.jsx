@@ -1,164 +1,139 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit2, MapPin, DollarSign, Home } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { SlidersHorizontal } from 'lucide-react'
 import { api } from '../api/client'
+import ListingCard from '../components/ListingCard'
+import SearchBar from '../components/SearchBar'
+import { PageLoader } from '../components/LoadingSpinner'
 import { useToast } from '../context/ToastContext'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import ToastContainer from '../components/ToastContainer'
+
+const DEFAULT_FILTERS = {
+  cidade: '',
+  preco_max: '',
+  avaliacao: '',
+  checkin: '',
+  checkout: '',
+}
+
+function rangesOverlap(startA, endA, startB, endB) {
+  return new Date(startA) < new Date(endB) && new Date(endA) > new Date(startB)
+}
 
 export default function HomePage() {
-  const [locais, setLocais] = useState([])
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
   const { addToast } = useToast()
-  const { user } = useAuth()
-  const navigate = useNavigate()
 
-  useEffect(() => {
-    carregarLocais()
-  }, [user])
+  const loadListings = useCallback(async (nextFilters = DEFAULT_FILTERS) => {
+    setLoading(true)
 
-  const carregarLocais = async () => {
     try {
-      setLoading(true)
-      const locais = await api.getLocais()
-      console.log('Locais carregados:', locais)
-      setLocais(locais)
+      if (nextFilters.checkin && nextFilters.checkout && nextFilters.checkin >= nextFilters.checkout) {
+        throw new Error('A data de check-out deve ser posterior ao check-in.')
+      }
+
+      let locais = await api.getLocais(nextFilters)
+
+      if (nextFilters.checkin && nextFilters.checkout) {
+        const ocupacoes = await Promise.all(
+          locais.map(async (local) => ({
+            localId: local.id,
+            periodos: await api.getOcupacao(local.id).catch(() => []),
+          }))
+        )
+
+        const mapaOcupacao = Object.fromEntries(
+          ocupacoes.map((item) => [item.localId, item.periodos])
+        )
+
+        locais = locais.filter((local) =>
+          !(mapaOcupacao[local.id] || []).some((periodo) =>
+            rangesOverlap(nextFilters.checkin, nextFilters.checkout, periodo.desde, periodo.ate)
+          )
+        )
+      }
+
+      setListings(locais)
     } catch (error) {
-      console.error('Erro ao carregar locais:', error)
-      addToast('Erro ao carregar imóveis: ' + error.message, 'error')
-      setLocais([])
+      addToast(error.message || 'Erro ao carregar imóveis.', 'error')
     } finally {
       setLoading(false)
     }
+  }, [addToast])
+
+  useEffect(() => {
+    loadListings(DEFAULT_FILTERS)
+  }, [loadListings])
+
+  const handleFilterChange = (field, value) => {
+    setFilters((current) => ({ ...current, [field]: value }))
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Tem certeza que deseja deletar este imóvel?')) return
+  const handleSearch = async (event) => {
+    event.preventDefault()
+    await loadListings(filters)
+  }
 
-    try {
-      // Implementar delete se necessário
-      addToast('Imóvel deletado com sucesso!', 'success')
-      carregarLocais()
-    } catch (error) {
-      addToast('Erro ao deletar: ' + error.message, 'error')
-    }
+  const handleClear = async () => {
+    setFilters(DEFAULT_FILTERS)
+    await loadListings(DEFAULT_FILTERS)
+  }
+
+  if (loading && listings.length === 0) {
+    return <PageLoader />
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <ToastContainer />
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            🏠 Imóveis Disponíveis
-          </h1>
-          {user?.tipo === 'anfitriao' && (
-            <button
-              onClick={() => navigate('/novo-imovel')}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center gap-2"
-            >
-              <Plus size={20} />
-              Novo Imóvel
-            </button>
-          )}
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] bg-gradient-to-r from-rose-500 via-primary to-rose-600 px-6 py-10 text-white shadow-lg sm:px-10">
+        <div className="max-w-3xl">
+          <span className="inline-flex rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em]">
+            Busca inteligente
+          </span>
+          <h1 className="mt-5 text-3xl font-bold sm:text-5xl">Encontre o imóvel ideal para sua próxima hospedagem.</h1>
+          <p className="mt-4 text-sm leading-7 text-rose-50 sm:text-base">
+            Pesquise por cidade, preço máximo, avaliação e disponibilidade por datas para reservar com mais segurança.
+          </p>
+        </div>
+      </section>
+
+      <section className="-mt-8 relative z-10">
+        <SearchBar
+          filters={filters}
+          onChange={handleFilterChange}
+          onSubmit={handleSearch}
+          onClear={handleClear}
+          loading={loading}
+        />
+      </section>
+
+      <section className="mt-10">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Imóveis disponíveis</h2>
+            <p className="mt-1 text-sm text-gray-500">{listings.length} resultado{listings.length === 1 ? '' : 's'} encontrado{listings.length === 1 ? '' : 's'}.</p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-gray-500 shadow-sm">
+            <SlidersHorizontal size={16} className="text-primary" />
+            Busca por cidade, valor, avaliação e datas
+          </div>
         </div>
 
-        {/* Lista de Imóveis */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {loading ? (
-            <div className="col-span-full text-center py-12">
-              <p className="text-gray-600">Carregando imóveis...</p>
-            </div>
-          ) : locais.length === 0 ? (
-            <div className="col-span-full text-center py-12 bg-white rounded-lg">
-              <Home size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 mb-4">Nenhum imóvel encontrado</p>
-            </div>
-          ) : (
-            locais.map(local => (
-              <div key={local._id} className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
-                {/* Imagem placeholder */}
-                <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                  <Home size={64} className="text-white opacity-50" />
-                </div>
-
-                {/* Conteúdo */}
-                <div className="p-4">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">{local.nome}</h3>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <MapPin size={16} />
-                      <span>{local.cidade}, {local.estado}</span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {local.descricao?.substring(0, 80)}...
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Por: {local.anfitriao_nome}
-                    </div>
-                  </div>
-
-                  {/* Comodidades */}
-                  {local.comodidades?.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex flex-wrap gap-1">
-                        {local.comodidades.slice(0, 3).map((comodidade, idx) => (
-                          <span key={idx} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                            {comodidade}
-                          </span>
-                        ))}
-                        {local.comodidades.length > 3 && (
-                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                            +{local.comodidades.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Preço e Ações */}
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <div className="text-2xl font-bold text-blue-600">
-                      R$ {local.preco_por_noite?.toFixed(2)}
-                      <span className="text-sm text-gray-600 font-normal">/noite</span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => navigate(`/imovel/${local._id}`)}
-                        className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition text-sm"
-                        title="Ver detalhes"
-                      >
-                        Ver
-                      </button>
-                      {user?.tipo === 'anfitriao' && user?.id === local.anfitriao_id && (
-                        <>
-                          <button
-                            onClick={() => navigate(`/editar-imovel/${local._id}`)}
-                            className="bg-gray-600 text-white p-2 rounded hover:bg-gray-700 transition"
-                            title="Editar"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(local._id)}
-                            className="bg-red-600 text-white p-2 rounded hover:bg-red-700 transition"
-                            title="Deletar"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {loading ? (
+          <PageLoader />
+        ) : listings.length === 0 ? (
+          <div className="rounded-[2rem] border border-dashed border-gray-300 bg-white px-6 py-16 text-center shadow-sm">
+            <h3 className="text-xl font-semibold text-gray-900">Nenhum imóvel encontrado</h3>
+            <p className="mt-2 text-sm text-gray-500">Ajuste os filtros para encontrar outras hospedagens disponíveis.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
