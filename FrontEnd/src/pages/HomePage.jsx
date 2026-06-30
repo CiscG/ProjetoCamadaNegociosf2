@@ -37,8 +37,8 @@ export default function HomePage() {
       if (nextFilters.checkin && nextFilters.checkout) {
         const ocupacoes = await Promise.all(
           locais.map(async (local) => ({
-            localId: local.id,
-            periodos: await api.getOcupacao(local.id).catch(() => []),
+            localId: local.id || local._id,
+            periodos: await api.getOcupacao(local.id || local._id).catch(() => []),
           }))
         )
 
@@ -47,7 +47,7 @@ export default function HomePage() {
         )
 
         locais = locais.filter((local) =>
-          !(mapaOcupacao[local.id] || []).some((periodo) =>
+          !(mapaOcupacao[local.id || local._id] || []).some((periodo) =>
             rangesOverlap(nextFilters.checkin, nextFilters.checkout, periodo.desde, periodo.ate)
           )
         )
