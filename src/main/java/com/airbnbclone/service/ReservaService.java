@@ -11,6 +11,8 @@ import com.airbnbclone.model.Usuario;
 import com.airbnbclone.repository.PropriedadeRepository;
 import com.airbnbclone.repository.ReservaRepository;
 import com.airbnbclone.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 @Service
 public class ReservaService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ReservaService.class);
     private final ReservaRepository reservaRepository;
     private final PropriedadeRepository propriedadeRepository;
     private final UsuarioRepository usuarioRepository;
@@ -47,17 +50,25 @@ public class ReservaService {
     }
 
     public ReservaResponse criar(ReservaRequest req) {
+        logger.info("Iniciando criação de reserva com dados: propriedadeId={}, hospedeId={}, checkin={}, checkout={}",
+                req.propriedadeId(), req.hospedeId(), req.checkin(), req.checkout());
+
         LocalDate checkin = LocalDate.parse(req.checkin(), DATE_FMT);
         LocalDate checkout = LocalDate.parse(req.checkout(), DATE_FMT);
 
         if (!checkout.isAfter(checkin))
             throw new IllegalArgumentException("Checkout deve ser posterior ao checkin.");
 
+        logger.info("Buscando propriedade com ID: {}", req.propriedadeId());
         Propriedade propriedade = propriedadeRepository.findById(req.propriedadeId())
                 .orElseThrow(() -> new IllegalArgumentException("Propriedade nao encontrada."));
+        logger.info("Propriedade encontrada: {}", propriedade.getTitulo());
 
+        logger.info("Buscando hóspede com ID: {}", req.hospedeId());
         Usuario hospede = usuarioRepository.findById(req.hospedeId())
                 .orElseThrow(() -> new IllegalArgumentException("Hospede nao encontrado."));
+        logger.info("Hóspede encontrado: {} (tipo: {})", hospede.getNome(), hospede.getTipo());
+
         if (!Set.of("hospede", "ambos").contains(hospede.getTipo()))
             throw new IllegalArgumentException("Somente hospedes podem fazer reservas.");
 
@@ -80,7 +91,9 @@ public class ReservaService {
         reserva.setStatus("confirmada");
         reserva.setDataReserva(LocalDateTime.now());
 
+        logger.info("Salvando reserva...");
         Reserva salva = reservaRepository.save(reserva);
+        logger.info("Reserva salva com ID: {}", salva.getId());
 
         Map<String, Usuario> anfitrioes = usuarioRepository.findById(propriedade.getAnfitriaoId())
                 .map(u -> Map.of(u.getId(), u)).orElse(Map.of());
