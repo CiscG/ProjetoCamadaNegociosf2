@@ -8,7 +8,6 @@ import com.airbnbclone.model.Usuario;
 import com.airbnbclone.repository.PropriedadeRepository;
 import com.airbnbclone.repository.ReservaRepository;
 import com.airbnbclone.repository.UsuarioRepository;
-import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -41,77 +40,108 @@ public class SeedDataLoader implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        String senhaHash = passwordEncoder.encode(DEMO_PASSWORD);
+        try {
+            log.info("============ INICIANDO SEED DATA LOADER ============");
+            String senhaHash = passwordEncoder.encode(DEMO_PASSWORD);
 
-        // Seed usuarios (idempotent — only insert if missing senha_hash)
-        List<UsuarioSeed> seeds = List.of(
-                new UsuarioSeed("65df00000000000000000001", "Carlos Oliveira", "carlos@email.com",
-                        "anfitriao", LocalDateTime.of(2024, 5, 10, 0, 0)),
-                new UsuarioSeed("65df00000000000000000002", "Maria Souza", "maria@email.com",
-                        "hospede", LocalDateTime.of(2025, 2, 15, 0, 0)),
-                new UsuarioSeed("65df00000000000000000003", "Ana Martins", "ana@email.com",
-                        "ambos", LocalDateTime.of(2026, 1, 20, 0, 0))
-        );
+            // Seed usuarios (idempotent — only insert if missing senha_hash)
+            List<UsuarioSeed> seeds = List.of(
+                    new UsuarioSeed("65df00000000000000000001", "Carlos Oliveira", "carlos@email.com",
+                            "anfitriao", LocalDateTime.of(2024, 5, 10, 0, 0)),
+                    new UsuarioSeed("65df00000000000000000002", "Maria Souza", "maria@email.com",
+                            "hospede", LocalDateTime.of(2025, 2, 15, 0, 0)),
+                    new UsuarioSeed("65df00000000000000000003", "Ana Martins", "ana@email.com",
+                            "ambos", LocalDateTime.of(2026, 1, 20, 0, 0))
+            );
 
-        for (UsuarioSeed s : seeds) {
-            Optional<Usuario> existente = usuarioRepo.findById(s.id());
-            if (existente.isEmpty() || existente.get().getSenhaHash() == null) {
-                log.info("Criando usuário: {} ({})", s.email(), s.id());
-                Usuario u = new Usuario();
-                u.setId(s.id());
-                u.setNome(s.nome());
-                u.setEmail(s.email());
-                u.setSenhaHash(senhaHash);
-                u.setTipo(s.tipo());
-                u.setDataCadastro(s.dataCadastro());
-                usuarioRepo.save(u);
-                log.info("Usuário {} salvo com sucesso", s.email());
+            log.info("Contando usuários existentes...");
+            long usuariosCount = usuarioRepo.count();
+            log.info("Usuários existentes: {}", usuariosCount);
+
+            for (UsuarioSeed s : seeds) {
+                try {
+                    Optional<Usuario> existente = usuarioRepo.findById(s.id());
+                    if (existente.isEmpty() || existente.get().getSenhaHash() == null) {
+                        log.info("Criando usuário: {} ({})", s.email(), s.id());
+                        Usuario u = new Usuario();
+                        u.setId(s.id());
+                        u.setNome(s.nome());
+                        u.setEmail(s.email());
+                        u.setSenhaHash(senhaHash);
+                        u.setTipo(s.tipo());
+                        u.setDataCadastro(s.dataCadastro());
+                        usuarioRepo.save(u);
+                        log.info("Usuário {} salvo com sucesso", s.email());
+                    } else {
+                        log.info("Usuário {} já existe", s.email());
+                    }
+                } catch (Exception e) {
+                    log.error("Erro ao salvar usuário {}: {}", s.email(), e.getMessage(), e);
+                }
             }
+
+            // Seed propriedades (only if collection is empty)
+            log.info("Contando propriedades existentes...");
+            long propriedadesCount = propriedadeRepo.count();
+            log.info("Propriedades existentes: {}", propriedadesCount);
+
+            if (propriedadeRepo.count() == 0) {
+                try {
+                    log.info("Criando propriedades...");
+                    Propriedade p1 = propriedade("75ef00000000000000000001", "65df00000000000000000001",
+                            "Studio Moderno - Copacabana", "A 2 minutos da praia com Wi-Fi de alta velocidade.",
+                            220.0, new Endereco("Rio de Janeiro", "RJ", "Brasil"),
+                            List.of("Wi-Fi", "Ar Condicionado", "Elevador"),
+                            LocalDateTime.of(2026, 3, 12, 0, 0));
+
+                    Propriedade p2 = propriedade("75ef00000000000000000002", "65df00000000000000000001",
+                            "Casa de Campo com Lareira", "Ideal para fins de semana relaxantes na serra.",
+                            450.0, new Endereco("Petropolis", "RJ", "Brasil"),
+                            List.of("Piscina", "Lareira", "Churrasqueira"),
+                            LocalDateTime.of(2026, 3, 20, 0, 0));
+
+                    Propriedade p3 = propriedade("75ef00000000000000000003", "65df00000000000000000003",
+                            "Loft Minimalista - Vila Madalena", "Perto de bares, galerias de arte e metro.",
+                            310.0, new Endereco("Sao Paulo", "SP", "Brasil"),
+                            List.of("Wi-Fi", "Academia", "Varanda"),
+                            LocalDateTime.of(2026, 4, 2, 0, 0));
+
+                    propriedadeRepo.saveAll(List.of(p1, p2, p3));
+                    log.info("Propriedades criadas com sucesso");
+                } catch (Exception e) {
+                    log.error("Erro ao salvar propriedades: {}", e.getMessage(), e);
+                }
+            }
+
+            // Seed reservas (only if collection is empty)
+            log.info("Contando reservas existentes...");
+            long reservasCount = reservaRepo.count();
+            log.info("Reservas existentes: {}", reservasCount);
+
+            if (reservaRepo.count() == 0) {
+                try {
+                    log.info("Criando reservas...");
+                    Reserva r1 = reserva("85ff00000000000000000001", "75ef00000000000000000001",
+                            "65df00000000000000000002",
+                            LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5),
+                            880.0, "confirmada", LocalDateTime.of(2026, 4, 10, 0, 0));
+
+                    Reserva r2 = reserva("85ff00000000000000000002", "75ef00000000000000000003",
+                            "65df00000000000000000002",
+                            LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 12),
+                            620.0, "pendente", LocalDateTime.of(2026, 4, 11, 0, 0));
+
+                    reservaRepo.saveAll(List.of(r1, r2));
+                    log.info("Reservas criadas com sucesso");
+                } catch (Exception e) {
+                    log.error("Erro ao salvar reservas: {}", e.getMessage(), e);
+                }
+            }
+
+            log.info("============ SEED DATA LOADER CONCLUÍDO COM SUCESSO ============");
+        } catch (Exception e) {
+            log.error("Erro geral no SeedDataLoader: {}", e.getMessage(), e);
         }
-
-        // Seed propriedades (only if collection is empty)
-        if (propriedadeRepo.count() == 0) {
-            log.info("Criando propriedades...");
-            Propriedade p1 = propriedade("75ef00000000000000000001", "65df00000000000000000001",
-                    "Studio Moderno - Copacabana", "A 2 minutos da praia com Wi-Fi de alta velocidade.",
-                    220.0, new Endereco("Rio de Janeiro", "RJ", "Brasil"),
-                    List.of("Wi-Fi", "Ar Condicionado", "Elevador"),
-                    LocalDateTime.of(2026, 3, 12, 0, 0));
-
-            Propriedade p2 = propriedade("75ef00000000000000000002", "65df00000000000000000001",
-                    "Casa de Campo com Lareira", "Ideal para fins de semana relaxantes na serra.",
-                    450.0, new Endereco("Petropolis", "RJ", "Brasil"),
-                    List.of("Piscina", "Lareira", "Churrasqueira"),
-                    LocalDateTime.of(2026, 3, 20, 0, 0));
-
-            Propriedade p3 = propriedade("75ef00000000000000000003", "65df00000000000000000003",
-                    "Loft Minimalista - Vila Madalena", "Perto de bares, galerias de arte e metro.",
-                    310.0, new Endereco("Sao Paulo", "SP", "Brasil"),
-                    List.of("Wi-Fi", "Academia", "Varanda"),
-                    LocalDateTime.of(2026, 4, 2, 0, 0));
-
-            propriedadeRepo.saveAll(List.of(p1, p2, p3));
-            log.info("Propriedades criadas com sucesso");
-        }
-
-        // Seed reservas (only if collection is empty)
-        if (reservaRepo.count() == 0) {
-            log.info("Criando reservas...");
-            Reserva r1 = reserva("85ff00000000000000000001", "75ef00000000000000000001",
-                    "65df00000000000000000002",
-                    LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5),
-                    880.0, "confirmada", LocalDateTime.of(2026, 4, 10, 0, 0));
-
-            Reserva r2 = reserva("85ff00000000000000000002", "75ef00000000000000000003",
-                    "65df00000000000000000002",
-                    LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 12),
-                    620.0, "pendente", LocalDateTime.of(2026, 4, 11, 0, 0));
-
-            reservaRepo.saveAll(List.of(r1, r2));
-            log.info("Reservas criadas com sucesso");
-        }
-
-        log.info("Dados de demonstracao prontos. Usuarios: carlos@email.com / maria@email.com / ana@email.com | Senha: {}", DEMO_PASSWORD);
     }
 
     private Propriedade propriedade(String id, String anfitriaoId, String titulo, String descricao,
