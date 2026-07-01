@@ -92,7 +92,7 @@ export default function PropertyPage() {
 
     try {
       await api.createReserva({
-        local_id: id,
+        propriedade_id: id,
         hospede_id: user.id,
         desde,
         ate,
