@@ -122,6 +122,15 @@ function buildQuery(params = {}) {
   return searchParams.toString() ? `?${searchParams.toString()}` : ''
 }
 
+function formatDateToYYYYMMDD(date) {
+  if (!date) return null
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export const api = {
   async login(email, senha) {
     const data = await request('/login', {
@@ -195,8 +204,8 @@ export const api = {
       body: JSON.stringify({
         propriedadeId: reserva.propriedade_id || reserva.local_id,
         hospedeId: reserva.hospede_id,
-        checkin: reserva.desde,
-        checkout: reserva.ate,
+        checkin: formatDateToYYYYMMDD(reserva.desde),
+        checkout: formatDateToYYYYMMDD(reserva.ate),
       }),
     })
 
