@@ -8,6 +8,7 @@ import com.airbnbclone.model.Usuario;
 import com.airbnbclone.repository.PropriedadeRepository;
 import com.airbnbclone.repository.ReservaRepository;
 import com.airbnbclone.repository.UsuarioRepository;
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -55,6 +56,7 @@ public class SeedDataLoader implements ApplicationRunner {
         for (UsuarioSeed s : seeds) {
             Optional<Usuario> existente = usuarioRepo.findById(s.id());
             if (existente.isEmpty() || existente.get().getSenhaHash() == null) {
+                log.info("Criando usuário: {} ({})", s.email(), s.id());
                 Usuario u = new Usuario();
                 u.setId(s.id());
                 u.setNome(s.nome());
@@ -63,11 +65,13 @@ public class SeedDataLoader implements ApplicationRunner {
                 u.setTipo(s.tipo());
                 u.setDataCadastro(s.dataCadastro());
                 usuarioRepo.save(u);
+                log.info("Usuário {} salvo com sucesso", s.email());
             }
         }
 
         // Seed propriedades (only if collection is empty)
         if (propriedadeRepo.count() == 0) {
+            log.info("Criando propriedades...");
             Propriedade p1 = propriedade("75ef00000000000000000001", "65df00000000000000000001",
                     "Studio Moderno - Copacabana", "A 2 minutos da praia com Wi-Fi de alta velocidade.",
                     220.0, new Endereco("Rio de Janeiro", "RJ", "Brasil"),
@@ -87,10 +91,12 @@ public class SeedDataLoader implements ApplicationRunner {
                     LocalDateTime.of(2026, 4, 2, 0, 0));
 
             propriedadeRepo.saveAll(List.of(p1, p2, p3));
+            log.info("Propriedades criadas com sucesso");
         }
 
         // Seed reservas (only if collection is empty)
         if (reservaRepo.count() == 0) {
+            log.info("Criando reservas...");
             Reserva r1 = reserva("85ff00000000000000000001", "75ef00000000000000000001",
                     "65df00000000000000000002",
                     LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5),
@@ -102,6 +108,7 @@ public class SeedDataLoader implements ApplicationRunner {
                     620.0, "pendente", LocalDateTime.of(2026, 4, 11, 0, 0));
 
             reservaRepo.saveAll(List.of(r1, r2));
+            log.info("Reservas criadas com sucesso");
         }
 
         log.info("Dados de demonstracao prontos. Usuarios: carlos@email.com / maria@email.com / ana@email.com | Senha: {}", DEMO_PASSWORD);
