@@ -150,10 +150,7 @@ export const api = {
   async getLocais(params = {}) {
     const { avaliacao, ...queryParams } = params
     const query = buildQuery(queryParams)
-    const data = await requestWithFallback([
-      `/locais${query}`,
-      `/propriedades${query}`,
-    ])
+    const data = await request(`/propriedades${query}`)
 
     const locais = Array.isArray(data) ? data.map(normalizeLocal) : []
 
@@ -178,12 +175,12 @@ export const api = {
       comodidades: local.comodidades || [],
     }
 
-    const data = await requestWithFallback(['/locais', '/propriedades'], {
+    const data = await request('/propriedades', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
 
-    return normalizeLocal(data.local || data.propriedade || data)
+    return normalizeLocal(data.propriedade || data)
   },
 
   async getReservas(params = {}) {
@@ -207,9 +204,6 @@ export const api = {
   },
 
   async getOcupacao(id) {
-    return requestWithFallback([
-      `/locais/${id}/ocupacao`,
-      `/propriedades/${id}/ocupacao`,
-    ])
+    return request(`/propriedades/${id}/ocupacao`)
   },
 }
