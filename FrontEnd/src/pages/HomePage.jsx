@@ -20,17 +20,13 @@ export default function HomePage() {
   const carregarLocais = async () => {
     try {
       setLoading(true)
-      // Se for anfitrião, carrega seus imóveis
-      if (user?.tipo === 'anfitriao') {
-        const locais = await api.getLocais({ anfitriao_id: user.id })
-        setLocais(locais)
-      } else {
-        // Se for hóspede, carrega todos
-        const locais = await api.getLocais()
-        setLocais(locais)
-      }
+      const locais = await api.getLocais()
+      console.log('Locais carregados:', locais)
+      setLocais(locais)
     } catch (error) {
+      console.error('Erro ao carregar locais:', error)
       addToast('Erro ao carregar imóveis: ' + error.message, 'error')
+      setLocais([])
     } finally {
       setLoading(false)
     }
@@ -55,7 +51,7 @@ export default function HomePage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">
-            {user?.tipo === 'anfitriao' ? '🏠 Meus Imóveis' : '🏠 Imóveis Disponíveis'}
+            🏠 Imóveis Disponíveis
           </h1>
           {user?.tipo === 'anfitriao' && (
             <button
@@ -78,15 +74,6 @@ export default function HomePage() {
             <div className="col-span-full text-center py-12 bg-white rounded-lg">
               <Home size={48} className="mx-auto text-gray-400 mb-4" />
               <p className="text-gray-600 mb-4">Nenhum imóvel encontrado</p>
-              {user?.tipo === 'anfitriao' && (
-                <button
-                  onClick={() => navigate('/novo-imovel')}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center gap-2"
-                >
-                  <Plus size={20} />
-                  Cadastrar Primeiro Imóvel
-                </button>
-              )}
             </div>
           ) : (
             locais.map(local => (
@@ -107,6 +94,9 @@ export default function HomePage() {
                     </div>
                     <div className="text-sm text-gray-600">
                       {local.descricao?.substring(0, 80)}...
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Por: {local.anfitriao_nome}
                     </div>
                   </div>
 
@@ -138,10 +128,10 @@ export default function HomePage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => navigate(`/imovel/${local._id}`)}
-                        className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
+                        className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition text-sm"
                         title="Ver detalhes"
                       >
-                        <Plus size={18} />
+                        Ver
                       </button>
                       {user?.tipo === 'anfitriao' && user?.id === local.anfitriao_id && (
                         <>
