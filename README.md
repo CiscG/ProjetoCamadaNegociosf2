@@ -18,8 +18,8 @@ Projeto acadêmico implementando camadas de negócio, persistência, requisitos 
 ### Frontend (React)
 - **Framework:** React 19
 - **Build Tool:** Vite 8
-- **Estilização:** Tailwind CSS
-- **Roteamento:** React Router
+- **Estilização:** Tailwind CSS 3
+- **Roteamento:** React Router v6
 - **Porta:** 5173
 
 ---
@@ -54,11 +54,11 @@ docker-compose up -d
 
 ```bash
 # Na raiz do projeto
-cd ~/ProjetoCamadaNegocios2
+cd ~/ProjetoCamadaNegociosf2
 
 # Compile e execute
-mvn clean install
-mvn spring-boot:run
+mvn clean install -DskipTests
+java -jar target/airbnb-clone-1.0.0.jar
 ```
 
 Backend roda em **http://localhost:5000**
@@ -76,7 +76,7 @@ Backend roda em **http://localhost:5000**
 ### Terminal 3 — Frontend React
 
 ```bash
-cd FrontEnd
+cd ~/ProjetoCamadaNegociosf2/FrontEnd
 npm install
 npm run dev
 ```
@@ -92,7 +92,7 @@ Acesse **http://localhost:5173** no navegador.
 Gere o build do frontend e sirva tudo pelo Spring Boot:
 
 ```bash
-cd FrontEnd
+cd ~/ProjetoCamadaNegociosf2/FrontEnd
 npm run build
 cd ..
 mvn clean package -DskipTests
@@ -119,14 +119,15 @@ O banco é populado automaticamente na primeira inicialização (classe `SeedDat
 
 | Recurso | Detalhes |
 |---|---|
-| **Login** | Autenticação por email/senha com hash bcrypt |
+| **Login/Logout** | Autenticação por email/senha com hash bcrypt |
 | **Busca de imóveis** | Filtro por cidade, preço, avaliação |
-| **Reserva** | Criação com verificação de conflito de datas |
+| **Reserva de imóvel** | Criação com verificação de conflito de datas |
 | **Disponibilidade** | Visualização de períodos ocupados |
 | **Dashboard** | Reservas como hóspede e imóveis como anfitrião |
-| **Cadastro de imóvel** | Perfis `anfitriao` e `ambos` |
+| **Cadastro de imóvel** | Apenas para perfis `anfitriao` e `ambos` |
 | **Relatórios** | Exportação XML e TXT |
 | **CLI** | Interface de linha de comando interativa |
+| **Toast Notifications** | Sistema de notificações em tempo real |
 
 ---
 
@@ -147,15 +148,15 @@ O banco é populado automaticamente na primeira inicialização (classe `SeedDat
 | `PUT` | `/api/usuarios/{id}` | Atualizar usuário |
 | `DELETE` | `/api/usuarios/{id}` | Deletar usuário |
 
-### Imóveis (Locais)
+### Propriedades (Imóveis)
 | Método | Endpoint | Descrição |
 |---|---|---|
-| `GET` | `/api/locais` | Listar imóveis (`cidade`, `preco_max`, `anfitriao_id`) |
-| `GET` | `/api/locais/{id}` | Obter imóvel por ID |
-| `POST` | `/api/locais` | Cadastrar novo imóvel |
-| `PUT` | `/api/locais/{id}` | Atualizar imóvel |
-| `DELETE` | `/api/locais/{id}` | Deletar imóvel |
-| `GET` | `/api/locais/{id}/ocupacao` | Períodos ocupados |
+| `GET` | `/api/propriedades` | Listar imóveis (`cidade`, `preco_max`, `anfitriao_id`) |
+| `GET` | `/api/propriedades/{id}` | Obter imóvel por ID |
+| `POST` | `/api/propriedades` | Cadastrar novo imóvel |
+| `PUT` | `/api/propriedades/{id}` | Atualizar imóvel |
+| `DELETE` | `/api/propriedades/{id}` | Deletar imóvel |
+| `GET` | `/api/propriedades/{id}/ocupacao` | Períodos ocupados |
 
 ### Reservas
 | Método | Endpoint | Descrição |
@@ -173,61 +174,94 @@ O banco é populado automaticamente na primeira inicialização (classe `SeedDat
 ## 📁 Estrutura do projeto
 
 ```
-ProjetoCamadaNegocios2/
+ProjetoCamadaNegociosf2/
 ├── src/main/java/com/airbnbclone/
 │   ├── AirbnbCloneApplication.java        # Aplicação principal (Spring Boot)
-│   ├── controller/                        # Controladores REST (Airbnb)
-│   ├── service/                           # Lógica de negócio (Airbnb)
+│   ├── controller/                        # Controladores REST
+│   │   ├── PropriedadeController.java
+│   │   ├── ReservaController.java
+│   │   ├── UsuarioController.java
+│   │   └── AuthController.java
+│   ├── service/                           # Lógica de negócio
+│   │   ├── PropriedadeService.java
+│   │   ├── ReservaService.java
+│   │   ├── UsuarioService.java
+│   │   └── AuthService.java
 │   ├── repository/                        # Acesso a dados (MongoDB)
-│   ├── model/                             # Entidades (Usuario, Local, Reserva)
+│   │   ├── PropriedadeRepository.java
+│   │   ├── ReservaRepository.java
+│   │   ├── UsuarioRepository.java
+│   │   └── EnderecoRepository.java
+│   ├── model/                             # Entidades
+│   │   ├── Usuario.java
+│   │   ├── Propriedade.java
+│   │   ├── Reserva.java
+│   │   └── Endereco.java
 │   ├── dto/                               # Data Transfer Objects
+│   │   ├── UsuarioRequest.java
+│   │   ├── PropriedadeRequest.java
+│   │   ├── PropriedadeResponse.java
+│   │   ├── ReservaRequest.java
+│   │   └── ReservaResponse.java
 │   ├── util/                              # Utilitários
+│   │   ├── PasswordEncoder.java
+│   │   └── DateUtil.java
 │   ├── seed/                              # Dados iniciais
-│   └── cli/                               # Interface CLI
-├── src/main/java/com/travelagency/
-│   ├── TravelAgencyApplication.java       # Módulo de requisitos Java
-│   ├── controller/                        # Controladores REST (Viagens/Clientes)
-│   ├── service/                           # Serviços com try-catch-finally, concorrência
-│   ├── repository/                        # Repositórios com tipos genéricos
-│   ├── model/                             # Modelos (Viagem, Cliente, Reserva, TipoViagem)
-│   ├── exception/                         # Exceções verificadas e não verificadas
-│   ├── config/                            # Configuração CORS
-│   └── util/                              # LoggerUtil, ArquivoUtil, XMLUtil
+│   │   └── SeedDataLoader.java
+│   └── config/                            # Configurações
+│       └── CorsConfig.java
 ├── src/main/resources/
 │   └── application.properties             # Configurações Spring Boot
 ├── pom.xml                                # Dependências Maven
 ├── FrontEnd/                              # Aplicação React
 │   ├── src/
 │   │   ├── pages/                         # Páginas
+│   │   │   ├── HomePage.jsx               # Listar imóveis
+│   │   │   ├── LoginPage.jsx              # Autenticação
+│   │   │   ├── NewListingPage.jsx         # Criar imóvel
+│   │   │   ├── ReservationPage.jsx        # Fazer reserva
+│   │   │   └── DashboardPage.jsx          # Painel do usuário
 │   │   ├── components/                    # Componentes React
-│   │   ├── context/                       # Context API (Auth, Toast)
+│   │   │   ├── Header.jsx
+│   │   │   ├── SearchBar.jsx
+│   │   │   ├── ListingCard.jsx
+│   │   │   ├── ReservationForm.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   └── Toast.jsx
+│   │   ├── context/                       # Context API
+│   │   │   ├── AuthContext.jsx
+│   │   │   └── ToastContext.jsx
 │   │   ├── api/                           # Integração com backend
-│   │   └── App.jsx
+│   │   │   └── client.js
+│   │   ├── App.jsx                        # Componente principal
+│   │   ├── main.jsx                       # Entry point
+│   │   └── index.css                      # Tailwind + estilos globais
 │   ├── package.json
-│   └── vite.config.js
+│   ├── vite.config.js
+│   └── tailwind.config.js
 └── README.md                              # Este arquivo
 ```
 
 ---
 
-## 🛠️ Requisitos de Java Implementados
+## 🛠️ Stack Técnico
 
-O módulo `com.travelagency` demonstra a implementação de todos os 14 requisitos Java:
+### Backend
+- Spring Boot 3.2.5
+- MongoDB (NoSQL)
+- Java Streams & Collections
+- Annotations & Reflection
+- Exception Handling (try-catch-finally)
+- Record Classes
+- Generics
 
-✅ Wrapper classes e Autoboxing (`model/Cliente.java`)
-✅ Tipos Genéricos e Enumeration (`model/TipoViagem.java`, `repository/ViagemRepository.java`)
-✅ Records, Text blocks e Blocos estáticos (`TravelAgencyApplication.java`)
-✅ Tipos de Exceções verificadas e não verificadas (`exception/`)
-✅ Blocos try-catch-finally (`service/ViagemService.java`)
-✅ Criação e Lançamento de exceções (`service/ViagemService.java`)
-✅ Referência this e super (`service/ClienteService.java`)
-✅ Persistência e recuperação de objetos (`model/Viagem.java`, `model/Cliente.java`)
-✅ Leitura e gravação de arquivos texto (`util/ArquivoUtil.java`)
-✅ Manipulação de Dados (`service/ViagemService.java`)
-✅ Manipulação de XML (`util/XMLUtil.java`)
-✅ Logging de Sistema (`util/LoggerUtil.java`)
-✅ Programação Concorrente (`service/ViagemService.java`)
-✅ Desenvolvimento de Componentes de Serviços REST (`controller/`)
+### Frontend
+- React 19 com Hooks
+- React Router v6
+- Context API
+- Vite (build tool)
+- Tailwind CSS 3
+- Fetch API
 
 ---
 
@@ -243,12 +277,17 @@ mvn test
 
 ## 📝 Variáveis de Ambiente
 
-Você pode customizar as configurações via variáveis de ambiente:
+Você pode customizar as configurações via `application.properties`:
 
-```bash
-export MONGO_URI=mongodb://seu-host:27017/airbnb_clone
-export SERVER_PORT=5000
-export SPRING_PROFILES_ACTIVE=dev
+```properties
+# MongoDB
+spring.data.mongodb.uri=mongodb://localhost:27017/airbnb_clone
+
+# Server
+server.port=5000
+
+# Logging
+logging.level.com.airbnbclone=INFO
 ```
 
 ---
@@ -273,8 +312,14 @@ kill -9 <PID>
 
 ### Frontend não conecta ao backend
 - Verifique se o backend está rodando em `http://localhost:5000`
-- Limpe o cache do navegador (Ctrl+Shift+Delete)
+- Limpe o cache do navegador (Ctrl+Shift+Delete ou Cmd+Shift+Delete)
 - Revise o console do navegador para erros de CORS
+- Verifique se o proxy Vite está configurado corretamente
+
+### Erro "Campos obrigatórios ausentes"
+- Verifique se todos os campos obrigatórios estão preenchidos no formulário
+- Recarregue a página para garantir que a versão mais recente do código está sendo usada
+- Limpe o cache do Vite: `rm -rf node_modules/.vite`
 
 ---
 
@@ -286,7 +331,7 @@ Projeto acadêmico — livre para uso educacional.
 
 ## 👥 Autores
 
-- **Francisco Sousa** (CiscG)
+- **Francisco Sousa** (CiscG) - Desenvolvimento Full Stack
 
 ---
 
@@ -296,3 +341,20 @@ Projeto acadêmico — livre para uso educacional.
 - [MongoDB Docs](https://docs.mongodb.com/)
 - [React Documentation](https://react.dev)
 - [Vite Guide](https://vitejs.dev/guide/)
+- [Tailwind CSS](https://tailwindcss.com)
+- [React Router](https://reactrouter.com)
+
+---
+
+## 📆 Última atualização
+
+**01/07/2026** - Projeto em desenvolvimento ativo ✅
+- ✅ Autenticação funcionando
+- ✅ Reservas funcionando
+- ✅ Criação de propriedades em desenvolvimento
+- ✅ Toast notifications implementadas
+- ✅ Dashboard do anfitrião em desenvolvimento
+
+---
+
+**Airbnb Clone - Pronto para usar! 🚀**
