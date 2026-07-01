@@ -33,16 +33,35 @@ export default function NewListingPage() {
       return
     }
 
+    // Validações de campos obrigatórios
+    if (!form.nome.trim()) {
+      addToast('Informe o nome do imóvel.', 'error')
+      return
+    }
+    if (!form.cidade.trim()) {
+      addToast('Informe a cidade do imóvel.', 'error')
+      return
+    }
+    if (!form.estado.trim()) {
+      addToast('Informe o estado do imóvel.', 'error')
+      return
+    }
+    if (!form.descricao.trim()) {
+      addToast('Informe a descrição do imóvel.', 'error')
+      return
+    }
+    if (!form.preco_por_noite || Number(form.preco_por_noite) <= 0) {
+      addToast('Informe um preço por noite válido (maior que 0).', 'error')
+      return
+    }
+    if (!form.comodidades.trim()) {
+      addToast('Informe pelo menos uma comodidade.', 'error')
+      return
+    }
+
     setLoading(true)
 
     try {
-      if (!form.nome.trim()) throw new Error('Informe o nome do imóvel.')
-      if (!form.cidade.trim()) throw new Error('Informe a cidade do imóvel.')
-      if (!form.estado.trim()) throw new Error('Informe o estado do imóvel.')
-      if (!form.preco_por_noite || Number(form.preco_por_noite) <= 0) {
-        throw new Error('Informe um preço por noite válido.')
-      }
-
       await api.createLocal({
         ...form,
         anfitriao_id: user.id,
@@ -76,7 +95,7 @@ export default function NewListingPage() {
 
         <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-2">
           <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Nome do imóvel</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Nome do imóvel *</label>
             <input
               type="text"
               value={form.nome}
@@ -88,7 +107,7 @@ export default function NewListingPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Cidade</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Cidade *</label>
             <input
               type="text"
               value={form.cidade}
@@ -100,7 +119,7 @@ export default function NewListingPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Estado</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Estado *</label>
             <input
               type="text"
               value={form.estado}
@@ -122,7 +141,7 @@ export default function NewListingPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Preço por noite (R$)</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Preço por noite (R$) *</label>
             <input
               type="number"
               min="1"
@@ -136,24 +155,26 @@ export default function NewListingPage() {
           </div>
 
           <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Descrição</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Descrição *</label>
             <textarea
               value={form.descricao}
               onChange={(event) => handleChange('descricao', event.target.value)}
               rows="5"
               placeholder="Descreva o espaço, os diferenciais e a região."
               className="input-field"
+              required
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Comodidades</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Comodidades *</label>
             <input
               type="text"
               value={form.comodidades}
               onChange={(event) => handleChange('comodidades', event.target.value)}
               placeholder="Wi-Fi, Piscina, Ar Condicionado"
               className="input-field"
+              required
             />
             <p className="mt-2 text-xs text-gray-500">Separe cada comodidade por vírgula.</p>
           </div>
